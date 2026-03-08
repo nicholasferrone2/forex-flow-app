@@ -3,67 +3,61 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Forex Strength Analyzer", layout="wide")
+st.set_page_config(page_title="Forex Volume Strength", layout="wide")
 
-st.title("🏛️ Analisi Cartesiana Forza Valute")
-st.markdown("L'asse Y indica la forza relativa (%), l'asse X indica la valuta.")
+st.title("📊 Indice di Forza basato sul Volume")
+st.markdown("Le linee mostrano l'afflusso di scambi (Volume) per ogni singola valuta nel tempo.")
 
-# Configurazione coppie
-pairs = ['EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'AUDUSD=X', 'USDCAD=X', 'EURJPY=X', 'GBPJPY=X']
+# Coppie necessarie per isolare le valute principali
+pairs = ['EURUSD=X', 'GBPUSD=X', 'USDJPY=X', 'AUDUSD=X', 'USDCAD=X', 'EURJPY=X', 'GBPJPY=X', 'EURGBP=X']
 
 @st.cache_data(ttl=600)
-def get_data():
-    # Scarichiamo gli ultimi 7 giorni per avere i dati di venerdì
-    df = yf.download(pairs, period="7d", interval="15m")['Close']
-    return df.dropna()
+def get_raw_volumes():
+    data = yf.download(pairs, period="2d", interval="15m")['Volume']
+    return data.dropna()
 
 try:
-    prices = get_data()
+    v_data = get_raw_volumes()
     
-    if not prices.empty:
-        # Calcolo forza relativa sull'ultimo movimento disponibile
-        last_p = prices.iloc[-1]
-        prev_p = prices.iloc[-2]
-        pct = ((last_p - prev_p) / prev_p) * 100
+    if not v_data.empty:
+        # Creiamo un nuovo DataFrame per la forza del volume delle singole valute
+        v_strength = pd.DataFrame(index=v_data.index)
         
-        # Mappa della forza
-        strength_data = {
-            'Valuta': ['USD', 'EUR', 'GBP', 'JPY', 'AUD'],
-            'Forza (%)': [
-                float(-(pct['EURUSD=X'] + pct['GBPUSD=X'] + pct['AUDUSD=X']) / 3),
-                float((pct['EURUSD=X'] + pct['EURJPY=X']) / 2),
-                float((pct['GBPUSD=X'] + pct['GBPJPY=X']) / 2),
-                float(-(pct['USDJPY=X'] + pct['EURJPY=X'] + pct['GBPJPY=X']) / 3),
-                float(pct['AUDUSD=X'])
-            ]
-        }
-        
-        df_strength = pd.DataFrame(strength_data)
+        # Calcolo Volume Isolato (Somma dei tick volume per ogni valuta)
+        v_strength['USD'] = v_data['EURUSD=X'] + v_data['GBPUSD=X'] + v_data['USDJPY=X'] + v_data['USDCAD=X'] + v_data['AUDUSD=X']
+        v_strength['EUR'] = v_data['EURUSD=X'] + v_data['EURJPY=X'] + v_data['EURGBP=X']
+        v_strength['GBP'] = v_data['GBPUSD=X'] + v_data['GBPJPY=X'] + v_data['EURGBP=X']
+        v_strength['JPY'] = v_data['USDJPY=X'] + v_data['EURJPY=X'] + v_data['GBPJPY=X']
+        v_strength['AUD'] = v_data['AUDUSD=X']
 
-        # CREAZIONE DIAGRAMMA CARTESIANO
-        fig = px.bar(
-            df_strength, 
-            x='Valuta', 
-            y='Forza (%)',
-            color='Forza (%)',
-            color_continuous_scale='RdYlGn', # Verde per positivo, Rosso per negativo
-            range_y=[-2, 2] # Limiti asse ordinate
+        # Normalizzazione (per rendere le linee confrontabili tra loro)
+        v_strength_norm = (v_strength - v_strength.mean()) / v_strength.std()
+
+        # Trasformazione per Plotly (da colonne a righe)
+        df_plot = v_strength_norm.reset_index().melt(id_vars='Datetime', var_name='Valuta', value_name='Intensità Volume')
+
+        # GRAFICO CARTESIANO A LINEE
+        fig = px.line(
+            df_plot, 
+            x='Datetime', 
+            y='Intensità Volume', 
+            color='Valuta',
+            title="Flusso di Volume Relativo per Valuta (Z-Score)",
+            template="plotly_dark",
+            line_shape="spline" # Rende le linee più morbide
         )
         
         fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font_color="white",
-            yaxis=dict(gridcolor='gray', zerolinecolor='white'),
-            xaxis=dict(title="Valute (Ascisse)"),
-            yaxis_title="Forza Relativa % (Ordinate)"
+            xaxis_title="Tempo (Sessione di trading)",
+            yaxis_title="Deviazione Volume (Forza Scambi)",
+            hovermode="x unified"
         )
 
         st.plotly_chart(fig, use_container_width=True)
         
-        st.info(f"Dati riferiti all'ultima sessione attiva: {prices.index[-1].strftime('%d/%m %H:%M')}")
+        st.success(f"Dati analizzati correttamente. Ultimo segnale: {v_data.index[-1].strftime('%H:%M')}")
     else:
-        st.warning("Mercati chiusi. Nessun dato disponibile per il diagramma.")
+        st.warning("Mercato chiuso. Le linee dei volumi appariranno alla riapertura di stasera.")
 
 except Exception as e:
-    st.error(f"Errore nel calcolo cartesiano: {e}")
+    st.error(f"Errore nel calcolo dei flussi: {e}")
