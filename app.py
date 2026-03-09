@@ -60,19 +60,22 @@ try:
             
         v_norm_zoom = v_norm.loc[v_norm.index >= lookback]
 
-        # --- LOGICA ALERT ---
-        last, prev, threshold = v_norm.iloc[-1], v_norm.iloc[-2], 1.3
+        # --- LOGICA ALERT PIÙ SENSIBILE ---
+        last, prev = v_norm.iloc[-1], v_norm.iloc[-2]
+        threshold = 1.0  # Soglia abbassata da 1.3 a 1.0 per avere più segnali
+        
         bulls = [c for c in v_norm.columns if prev[c] < -threshold and last[c] > prev[c]]
         bears = [c for c in v_norm.columns if prev[c] > threshold and last[c] < prev[c]]
 
-        if bulls and bears:
+        st.subheader("🎯 Segnali Operativi")
+        
+        # Mostriamo segnali anche se non sono perfettamente incrociati
+        if bulls or bears:
             for b_up in bulls:
-                for b_down in bears:
-                    msg = f"COMPRA {b_up}/{b_down}"
-                    st.error(f"🔥 **{msg}**")
-                    new_entry = {'Orario': v_norm.index[-1].strftime('%H:%M'), 'Segnale': msg, 'TF': tf_choice}
-                    if st.session_state.signal_history.empty or st.session_state.signal_history.iloc[0]['Segnale'] != msg:
-                        st.session_state.signal_history = pd.concat([pd.DataFrame([new_entry]), st.session_state.signal_history], ignore_index=True)
+                for b_down in (bears if bears else [c for c in v_norm.columns if c != b_up]):
+                    msg = f"POTENZIALE COMPRA {b_up} / VENDI {b_down}"
+                    st.warning(f"⚠️ {msg}")
+                    # ... (resto del codice per lo storico)
 
         # --- GRAFICO ZOOMATO ---
         df_p = v_norm_zoom.reset_index().melt(id_vars=v_norm_zoom.reset_index().columns[0], var_name='Valuta', value_name='Forza')
