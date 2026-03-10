@@ -39,24 +39,62 @@ def fetch_strength(tf, prd):
     
     if df_close.empty: return pd.DataFrame()
     
-    # Calcolo Forza Relativa
     rets = np.log(df_close / df_close.shift(1)).dropna()
     s = pd.DataFrame(index=rets.index)
     s['EUR'] = rets['EURUSD=X']; s['GBP'] = rets['GBPUSD=X']; s['JPY'] = -rets['USDJPY=X']
     s['AUD'] = rets['AUDUSD=X']; s['CAD'] = -rets['USDCAD=X']; s['CHF'] = -rets['USDCHF=X']
     s['NZD'] = rets['NZDUSD=X']; s['USD'] = -s.mean(axis=1)
     
-    # Ritorna forza cumulata e normalizzata
     strength_cum = s.cumsum()
     return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
 
 try:
-    # 1. Caricamento dati per il grafico principale
     v_final = fetch_strength(tf_main, period_map[tf_main])
     
     if not v_final.empty:
-        # --- LOGICA ALERT ---
         last, prev, threshold = v_final.iloc[-1], v_final.iloc[-2], 40
+        
+        # --- GRAFICO STILE MT4 (FIX ERRORE INDEX) ---
+        # Resettiamo l'indice e diamogli un nome esplicito 'Data'
+        v_plot = v_final.tail(80).reset_index()
+        v_plot.columns.values[0] = 'Data' 
+        
+        df_p = v_plot.melt(id_vars='Data', var_name='Valuta', value_name='Forza')
+        
+        fig = px.line(df_p, x='Data', y='Forza', color='Valuta', 
+                     template="plotly_dark", line_shape='spline')
+        
+        for trace in fig.data:
+            trace.line.width = 5 if abs(last[trace.name]) >= threshold else 2
+        
+        fig.add_hrect(y0=threshold, y1=threshold+20, fillcolor="red", opacity=0.1)
+        fig.add_hrect(y0=-threshold-20, y1=-threshold, fillcolor="green", opacity=0.1)
+        fig.update_layout(yaxis=dict(range=[-75, 75]), hovermode="x unified", height=500)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # --- MATRICE MULTI-TIMEFRAME ---
+        st.subheader("🏁 Multi-Timeframe Strength Matrix")
+        
+        tf_list = ["1m", "5m", "15m", "1h"]
+        matrix_data = {}
+        for tf in tf_list:
+            d = fetch_strength(tf, period_map[tf])
+            if not d.empty:
+                matrix_data[tf] = d.iloc[-1]
+
+        if matrix_data:
+            matrix_df = pd.DataFrame(matrix_data).round(1)
+            
+            def color_strength(val):
+                if val > 15: return 'background-color: #006400; color: white' # Verde scuro
+                if val > 5: return 'background-color: #90ee90; color: black'  # Verde chiaro
+                if val < -15: return 'background-color: #8b0000; color: white' # Rosso scuro
+                if val < -5: return 'background-color: #ffcccb; color: black'  # Rosso chiaro
+                return ''
+
+            st.table(matrix_df.style.applymap(color_strength))
+
+        # --- ALERT LOGIC ---
         bulls = [c for c in v_final.columns if prev[c] < -threshold and last[c] > prev[c]]
         bears = [c for c in v_final.columns if prev[c] > threshold and last[c] < prev[c]]
 
@@ -70,44 +108,8 @@ try:
                         new_entry = {'Orario': v_final.index[-1].strftime('%H:%M'), 'Segnale': msg, 'TF': tf_main}
                         st.session_state.signal_history = pd.concat([pd.DataFrame([new_entry]), st.session_state.signal_history], ignore_index=True)
 
-        # --- GRAFICO STILE MT4 (LINEE CURVE) ---
-        df_p = v_final.tail(80).reset_index().melt(id_vars='index', var_name='Valuta', value_name='Forza')
-        fig = px.line(df_p, x='index', y='Forza', color='Valuta', template="plotly_dark", line_shape='spline')
-        
-        for trace in fig.data:
-            trace.line.width = 5 if abs(last[trace.name]) >= threshold else 2
-        
-        fig.add_hrect(y0=threshold, y1=threshold+20, fillcolor="red", opacity=0.1)
-        fig.add_hrect(y0=-threshold-20, y1=-threshold, fillcolor="green", opacity=0.1)
-        fig.update_layout(yaxis=dict(range=[-75, 75]), hovermode="x unified", height=500)
-        st.plotly_chart(fig, use_container_width=True)
-
-        # --- MATRICE MULTI-TIMEFRAME (STILE IMMAGINE) ---
-        st.subheader("🏁 Multi-Timeframe Strength Matrix")
-        
-        # Funzione veloce per ottenere l'ultimo valore di forza per TF
-        def get_last_val(tf, prd):
-            d = fetch_strength(tf, prd)
-            return d.iloc[-1] if not d.empty else None
-
-        tf_list = ["1m", "5m", "15m", "1h"]
-        matrix_data = {}
-        for tf in tf_list:
-            val = get_last_val(tf, period_map[tf])
-            if val is not None: matrix_data[tf] = val
-
-        matrix_df = pd.DataFrame(matrix_data).round(1)
-        
-        # Visualizzazione a tabella colorata
-        def color_strength(val):
-            color = 'background-color: #00ff00; color: black' if val > 10 else 'background-color: #ff0000; color: white' if val < -10 else ''
-            return color
-
-        st.table(matrix_df.style.applymap(color_strength))
-
-        # Storico
         with st.expander("📜 Visualizza Storico Segnali"):
             st.dataframe(st.session_state.signal_history, use_container_width=True)
 
 except Exception as e:
-    st.info(f"In attesa di dati... {e}")
+    st.info(f"In attesa di dati freschi o mercati chiusi... (Nota: {e})")
