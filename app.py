@@ -67,9 +67,12 @@ else:
 st.sidebar.divider()
 
 # --- CAMPI INPUT PER TRADING ---
+# --- AGGIORNAMENTO PARAMETRI ORDINE ---
 st.sidebar.subheader("⚙️ Parametri Ordine")
+# Impostato a 0.10 lotti come richiesto
 lotti = st.sidebar.number_input("Volume (Lotti):", min_value=0.01, max_value=5.0, value=0.10, step=0.01)
-tp_pips = st.sidebar.number_input("Take Profit (Pips):", min_value=0, max_value=500, value=20)
+# Impostato a 5 pips come richiesto
+tp_pips = st.sidebar.number_input("Take Profit (Pips):", min_value=0, max_value=500, value=5)
 st.sidebar.info("Nota: Lo Stop Loss è disattivato.")
 
 # Tasto Test
