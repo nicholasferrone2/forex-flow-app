@@ -38,12 +38,6 @@ else:
     st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
 
 st.sidebar.divider()
-# TASTO DI TEST PER TELEGRAM
-st.sidebar.divider()
-if st.sidebar.button("🧪 Simula Segnale G8"):
-    send_telegram_trade_signal("EURUSD", "BUY")
-    st.sidebar.success("Test inviato su Telegram!")
-
 # 4. FUNZIONE INVIO TELEGRAM
 def send_telegram_trade_signal(pair, action):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -66,6 +60,11 @@ def send_telegram_trade_signal(pair, action):
 
 # 5. INTERFACCIA E PARAMETRI G8
 st.title("📊 G8 Flow Monitor & Execution")
+# TASTO DI TEST PER TELEGRAM
+st.sidebar.divider()
+if st.sidebar.button("🧪 Simula Segnale G8"):
+    send_telegram_trade_signal("EURUSD", "BUY")
+    st.sidebar.success("Test inviato su Telegram!")
 
 tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
 right_margin = st.sidebar.slider("Chart Shift:", 5, 50, 20)
