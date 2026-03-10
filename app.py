@@ -6,8 +6,8 @@ import requests
 import json
 
 # Recupero configurazioni dai Secrets
-TOKEN = st.secrets["TELEGRAM_TOKEN"]
-CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
+TOKEN = st.secrets["8156536376:AAHVyKaFWiCKWoSjBVZ4d0qlIfwJUc7yY5U"]
+CHAT_ID = st.secrets["8538711227"]
 
 # Funzione per inviare messaggi con BOTTONI
 def send_telegram_trade_signal(pair, action):
