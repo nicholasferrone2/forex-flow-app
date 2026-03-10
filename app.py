@@ -38,6 +38,11 @@ else:
     st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
 
 st.sidebar.divider()
+# TASTO DI TEST PER TELEGRAM
+st.sidebar.divider()
+if st.sidebar.button("🧪 Simula Segnale G8"):
+    send_telegram_trade_signal("EURUSD", "BUY")
+    st.sidebar.success("Test inviato su Telegram!")
 
 # 4. FUNZIONE INVIO TELEGRAM
 def send_telegram_trade_signal(pair, action):
