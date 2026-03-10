@@ -28,10 +28,6 @@ if 'signal_history' not in st.session_state:
 st.title("⚡ G8 Flow Monitor & Telegram Bot")
 
 # --- SIDEBAR ---
-# Aggiungi questo nella sezione Sidebar per fare una prova manuale
-if st.sidebar.button("🚀 Invia Test a Telegram"):
-    send_telegram_msg("🔔 Il collegamento funziona! Riceverai qui i segnali G8.")
-    st.sidebar.success("Messaggio inviato!")
 tf_main = st.sidebar.selectbox("Timeframe Grafico:", ("1m", "5m", "15m", "1h"), index=2)
 right_margin = st.sidebar.slider("Chart Shift (Margine):", 5, 50, 20)
 period_map = {"1m": "1d", "5m": "5d", "15m": "5d", "1h": "60d"}
