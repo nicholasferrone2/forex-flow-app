@@ -118,6 +118,10 @@ try:
         df_p = v_plot.melt(id_vars='Data', var_name='Valuta', value_name='Forza')
         fig = px.line(df_p, x='Data', y='Forza', color='Valuta', template="plotly_dark")
         fig.update_layout(yaxis=dict(range=[-75, 75]), height=600)
+        # RIPRISTINO FASCE COLORATE
+        fig.add_hrect(y0=35, y1=75, fillcolor="green", opacity=0.1, line_width=0)
+        fig.add_hrect(y0=-35, y1=-75, fillcolor="red", opacity=0.1, line_width=0)
+        fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
         st.plotly_chart(fig, use_container_width=True)
 
         # Analisi Segnali
