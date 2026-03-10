@@ -37,6 +37,32 @@ def send_telegram_trade_signal(pair, action):
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="G8 Pro Trader", layout="wide")
 st.title("📊 G8 Flow Monitor & Execution")
+# --- LOGICA CTRADER OAUTH2 ---
+client_id = st.secrets["CTRADER_CLIENT_ID"]
+client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
+redirect_uri = "https://tua-app.streamlit.app/" # <--- METTI IL TUO URL REALE QUI
+
+st.sidebar.header("🔌 Connessione Broker")
+
+# Creazione dell'URL di autorizzazione
+auth_url = (
+    f"https://openapi.ctrader.com/apps/auth?client_id={client_id}"
+    f"&redirect_uri={redirect_uri}&scope=accounts,trading"
+)
+
+# Se l'URL contiene un codice di ritorno dopo il login su cTrader
+query_params = st.query_params
+if "code" in query_params:
+    auth_code = query_params["code"]
+    st.sidebar.success("✅ Codice di autorizzazione ricevuto!")
+    
+    # Qui il bot scambia il codice con un Token (lo faremo nel prossimo step)
+    if st.sidebar.button("Finalizza Connessione"):
+        st.sidebar.info("Generazione Access Token in corso...")
+else:
+    st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
+
+# ---------------------------------------------------------
 
 # Sidebar
 tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
