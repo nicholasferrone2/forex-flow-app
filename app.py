@@ -9,8 +9,8 @@ import json
 # --- CONFIGURAZIONE SICURA ---
 # Assicurati di aver inserito questi nomi nei "Secrets" di Streamlit Cloud!
 try:
-    TOKEN = st.secrets["8156536376:AAHVyKaFWiCKWoSjBVZ4d0qlIfwJUc7yY5U"]
-    CHAT_ID = st.secrets["8538711227"]
+    TOKEN = st.secrets["TELEGRAM_TOKEN"]
+    CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
 except:
     st.error("⚠️ Configurazione Secrets mancante! Inserisci TELEGRAM_TOKEN e TELEGRAM_CHAT_ID nelle impostazioni di Streamlit.")
     st.stop()
