@@ -18,6 +18,51 @@ try:
 except Exception as e:
     st.error(f"⚠️ Errore nei Secrets: {e}")
     st.stop()
+    # Sotto la sezione dei Secrets, aggiungi questa funzione
+def get_access_token(auth_code):
+    url = "https://openapi.ctrader.com/apps/token"
+    data = {
+        "grant_type": "authorization_code",
+        "code": auth_code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri
+    }
+    response = requests.post(url, data=data)
+    return response.json()
+    def execute_trade(symbol, side, volume, tp_pips):
+    if 'access_token' not in st.session_state:
+        st.error("Effettua prima il login al broker!")
+        return
+    
+    # Adattamento simbolo per TotalFX (rimuove =X di Yahoo)
+    clean_symbol = symbol.replace("=X", "")
+    
+    url = f"https://openapi.ctrader.com/apps/trade/v2/accounts/{st.secrets['CTRADER_ACCOUNT_ID']}/orders"
+    headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
+    
+    payload = {
+        "symbolName": clean_symbol,
+        "orderType": "MARKET",
+        "tradeSide": side,
+        "volume": int(volume * 100000), # 0.1 lotti = 10.000 unità
+        "takeProfit": tp_pips,
+        # Lo Stop Loss rimane vuoto come da tua richiesta
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    return response.json()
+
+# Nella Sidebar, aggiorna la logica di ricezione
+if "code" in st.query_params:
+    auth_code = st.query_params["code"]
+    if 'access_token' not in st.session_state:
+        token_data = get_access_token(auth_code)
+        if "access_token" in token_data:
+            st.session_state.access_token = token_data["access_token"]
+            st.sidebar.success("✅ Token Ricevuto! Broker Connesso.")
+        else:
+            st.sidebar.error("❌ Errore nel recupero Token.")
 
 # 3. FUNZIONE INVIO TELEGRAM (POTENZIATA)
 def send_telegram_trade_signal(pair, action, lot, tp):
