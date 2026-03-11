@@ -19,7 +19,7 @@ try:
     
     # INDIRIZZO APP (Deve essere identico a quello su Spotware Connect)
     # Esempio: "https://nome-tua-app.streamlit.app/"
-    redirect_uri = "https://forex-flow-app.streamlit.app/" 
+    redirect_uri = "https://forex-flow-app.streamlit.app" 
     
     auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 except Exception as e:
