@@ -104,33 +104,65 @@ def fetch_strength(tf, prd):
     strength_cum = s.cumsum()
     return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
 
-# 6. GRAFICO E ANALISI SEGNALI REAL-TIME
+# 6. GRAFICO E ANALISI SEGNALI REAL-TIME (AGGIORNATO CON FASCE)
 try:
     v_final = fetch_strength(tf_main, "5d")
     
     if not v_final.empty:
-        # Grafico Plotly
+        # --- GRAFICO PLOTLY CON FASCE ---
         v_plot = v_final.tail(80).reset_index()
         v_plot.columns.values[0] = 'Data' 
         df_p = v_plot.melt(id_vars='Data', var_name='Valuta', value_name='Forza')
+        
         fig = px.line(df_p, x='Data', y='Forza', color='Valuta', template="plotly_dark")
-        fig.update_layout(yaxis=dict(range=[-75, 75]), height=600)
+        
+        # AGGIUNTA FASCE IPER-COMPRATO / IPER-VENDUTO
+        threshold = 35
+        
+        # Linea Ipercomprato (ROSSA)
+        fig.add_hline(y=threshold, line_dash="dash", line_color="red", 
+                      annotation_text="IPERCOMPRATO", annotation_position="top left")
+        
+        # Linea Ipervenduto (VERDE)
+        fig.add_hline(y=-threshold, line_dash="dash", line_color="green", 
+                      annotation_text="IPERVENDUTO", annotation_position="bottom left")
+        
+        # Opzionale: Fascia centrale neutra grigia
+        fig.add_hrect(y0=-threshold, y1=threshold, fillcolor="gray", opacity=0.1, line_width=0)
+
+        fig.update_layout(
+            yaxis=dict(range=[-75, 75], title="Forza G8"), 
+            height=600,
+            title=f"Analisi G8 Flow - Timeframe: {tf_main}"
+        )
+        
         st.plotly_chart(fig, use_container_width=True)
 
-        # Analisi Segnali
+        # --- ANALISI SEGNALI E INVIO TELEGRAM ---
         last, prev = v_final.iloc[-1], v_final.iloc[-2]
-        threshold = 35 
         
+        # Logica: se una valuta è oltre la fascia e inverte la direzione
         bulls = [c for c in v_final.columns if prev[c] < -threshold and last[c] > prev[c]]
         bears = [c for c in v_final.columns if prev[c] > threshold and last[c] < prev[c]]
 
-        if bulls and bears:
-            for b_up in bulls:
-                for b_down in bears:
-                    pair_name = f"{b_up}{b_down}"
-                    st.success(f"🔥 Segnale rilevato: {pair_name}")
-                    # Invio automatico con i parametri della sidebar
-                    send_telegram_trade_signal(pair_name, "BUY", lotti, tp_pips)
+        st.write("### 📢 Monitor Segnali Attivi")
+        
+        if bulls or bears:
+            col1, col2 = st.columns(2)
+            with col1: st.write("✅ Valute in recupero (Bull):", bulls)
+            with col2: st.write("❌ Valute in stallo (Bear):", bears)
+
+            if bulls and bears:
+                for b_up in bulls:
+                    for b_down in bears:
+                        pair_name = f"{b_up}{b_down}"
+                        st.success(f"🔥 Segnale rilevato: {pair_name}")
+                        
+                        # INVIO A TELEGRAM con i tuoi parametri fissi 0.1 e 5 (se impostati in sidebar)
+                        # Nota: lotti e tp_pips vengono letti dalla sidebar sopra
+                        send_telegram_trade_signal(pair_name, "BUY", lotti, tp_pips)
+        else:
+            st.info("🔎 Nessun incrocio nelle fasce di iper-estensione al momento.")
 
 except Exception as e:
-    st.error(f"Errore: {e}")
+    st.error(f"Errore nel rendering del grafico o segnali: {e}")
