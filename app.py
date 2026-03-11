@@ -1,40 +1,30 @@
-import streamlit as st  # Questa riga risolve l'errore!
-import time
+import streamlit as st
 
-# Impostazioni fisse richieste da te
-VOLUME_UNITS = 10000  # Corrisponde a 0.1 lotti
-TP_PIPS = 5
+# --- DATI DA CONTROLLARE CON CURA ---
+CLIENT_ID = "22771_mJTHafTpA4Fb4CNKAMARYKOBhoQ5JmZAhoS1nooXLTEQ8cH9Aq" 
+CLIENT_SECRET = "o5nz4SfbkWJ3CPXAVkyf57EkgF8wUIP8OUKOKVliamqpeCZaFb"
+REDIRECT_URI = "https://forex-flow-app.streamlit.app/"
 
-st.set_page_config(page_title="G8 Flow Test", page_icon="📈")
+st.set_page_config(page_title="G8 Flow - Login Fix")
+st.title("🔑 G8 Flow: Attivazione Permessi")
 
-st.title("🎯 G8 Flow - Test Segnale")
-st.divider()
+# Costruzione URL di autorizzazione (Pulito)
+auth_url = (
+    f"https://openapi.ctrader.com/apps/auth"
+    f"?client_id={CLIENT_ID}"
+    f"&redirect_uri={REDIRECT_URI}"
+    f"&scope=accounts%20trading"
+    f"&response_type=code"
+)
 
-st.write(f"### ⚙️ Parametri Salvati")
-st.write(f"Lotti: **0.1** | Take Profit: **{TP_PIPS} Pips**")
-
-# Pulsante per mandare il falso segnale
-if st.button("🚀 INVIA FALSO SEGNALE (BUY EURUSD)", use_container_width=True):
-    with st.status("Ricezione segnale in corso...", expanded=True) as status:
-        st.write("📡 Segnale intercettato: **BUY EURUSD**")
-        time.sleep(1)
-        
-        # Costruzione logica dell'ordine
-        ordine_json = {
-            "symbol": "EURUSD",
-            "volume": VOLUME_UNITS,
-            "side": "BUY",
-            "takeProfitPips": TP_PIPS
-        }
-        
-        st.write("📦 Ordine impacchettato per cTrader:")
-        st.json(ordine_json)
-        
-        time.sleep(1)
-        status.update(label="✅ Test Completato!", state="complete")
-    
-    st.balloons()
-    st.success(f"Logica perfetta: inviati {VOLUME_UNITS} unità con TP a {TP_PIPS} pips.")
-
-st.divider()
-st.caption("Nota: Questo codice verifica che la logica dei 0.1 lotti funzioni. Per l'invio reale serve il login.")
+# Se non abbiamo ancora il codice di autorizzazione nell'URL
+if "code" not in st.query_params:
+    st.warning("Stato: Non Connesso")
+    st.write("Clicca il tasto sotto. Se dopo il login vedi errore, guarda l'URL in alto.")
+    st.link_button("🔓 APRI AUTORIZZAZIONE CTRADER", auth_url, type="primary")
+else:
+    # Se il codice appare nell'URL, abbiamo vinto
+    auth_code = st.query_params["code"]
+    st.success("✅ ABBIAMO IL CODICE!")
+    st.code(auth_code)
+    st.write("Ora il bot può ricevere i segnali da Telegram e aprire 0.1 lotti.")
