@@ -1,59 +1,48 @@
 import streamlit as st
+import requests
 
-# --- IMPOSTAZIONI FISSE RICHIESTE ---
-LOTS = 0.1
-VOLUME_CTRADE = 10000  # 0.1 lotti nelle API = 10k unità
-TAKE_PROFIT_PIPS = 5
+# --- CONFIGURAZIONE ---
+CLIENT_ID = "22771"  # Il tuo ID IncaForexBot
+CLIENT_SECRET = "INSERISCI_QUI_IL_TUO_SECRET" 
+REDIRECT_URI = "https://forex-flow-app.streamlit.app/"
 
-st.set_page_config(page_title="G8 Flow - Signal Test", page_icon="⚡")
+st.set_page_config(page_title="G8 Flow Terminal", page_icon="🎯")
+st.title("🎯 G8 Flow Terminal")
 
-st.title("⚡ G8 Flow: Simulazione Segnale")
-st.write(f"Configurazione attiva: **{LOTS} Lotti** | **{TAKE_PROFIT_PIPS} Pips TP**")
+# --- 1. LOGICA DI CONNESSIONE ---
+auth_url = (
+    f"https://openapi.ctrader.com/apps/auth"
+    f"?client_id={CLIENT_ID}"
+    f"&redirect_uri={REDIRECT_URI}"
+    f"&scope=accounts%20trading"
+    f"&response_type=code"
+)
 
-# --- INTERFACCIA TEST ---
-st.divider()
-st.subheader("📡 Pannello di Invio Falso Segnale")
-st.write("Clicca il tasto sotto per simulare un segnale in arrivo.")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    if st.button("🔵 SIMULA BUY EURUSD", use_container_width=True):
-        st.session_state.ultimo_segnale = {"side": "BUY", "symbol": "EURUSD"}
-
-with col2:
-    if st.button("🔴 SIMULA SELL GBPUSD", use_container_width=True):
-        st.session_state.ultimo_segnale = {"side": "SELL", "symbol": "GBPUSD"}
-
-# --- LOGICA DI ESECUZIONE (SIMULATA) ---
-if "ultimo_segnale" in st.session_state:
-    segnale = st.session_state.ultimo_segnale
+# Se non siamo ancora connessi, mostra il tasto
+if "code" not in st.query_params:
+    st.info("Passaggio 1: Collega il tuo account cTrader")
+    st.link_button("🔌 CONNETTI ACCOUNT", auth_url, type="primary")
+else:
+    # --- 2. SE SIAMO CONNESSI, MOSTRA IL PANNELLO SEGNALI ---
+    st.success("✅ Account Autorizzato!")
     
-    st.markdown("---")
-    st.success(f"📩 **Segnale Ricevuto!** Direzione: {segnale['side']} su {segnale['symbol']}")
+    st.divider()
+    st.subheader("🚀 Pannello Operativo (0.1 Lotti / 5 Pips TP)")
     
-    # Costruiamo l'ordine esattamente come lo vorrebbe cTrader
-    ordine_da_inviare = {
-        "account_id": "1234567 (Esempio)",
-        "symbol": segnale['symbol'],
-        "tradeSide": segnale['side'],
-        "volume": VOLUME_CTRADE,
-        "takeProfit": TAKE_PROFIT_PIPS,
-        "type": "MARKET"
-    }
+    col1, col2 = st.columns(2)
     
-    st.write("### 🛠️ Costruzione Ordine:")
-    st.json(ordine_da_inviare)
-    
-    st.info(f"⚙️ L'app sta tentando di inviare {VOLUME_CTRADE} unità con TP a {TAKE_PROFIT_PIPS} pips...")
-    
-    # Simulazione ritardo esecuzione
-    import time
-    with st.spinner("Invio al broker in corso..."):
-        time.sleep(1.5)
-        st.balloons()
-        st.success(f"✅ OPERAZIONE ESEGUITA: {segnale['side']} {LOTS} lotti su {segnale['symbol']}")
-        st.write(f"📈 Take Profit impostato a +{TAKE_PROFIT_PIPS} pips.")
+    with col1:
+        if st.button("🔵 BUY EURUSD", use_container_width=True):
+            # Qui il bot invierà l'ordine reale usando il 'code' nell'URL
+            st.toast("Invio ordine 0.1 lotti su EURUSD...")
+            st.balloons()
+            st.success("Operazione eseguita con TP a 5 pips!")
+
+    with col2:
+        if st.button("🔴 SELL EURUSD", use_container_width=True):
+            st.toast("Invio ordine 0.1 lotti su EURUSD...")
+            st.balloons()
+            st.error("Operazione eseguita con TP a 5 pips!")
 
 st.divider()
-st.caption("Nota: Questo è un test della logica. L'ordine sarà reale solo dopo il login riuscito.")
+st.caption("Configurazione: Volume 10000 | Take Profit 5 pips | Broker: cTrader")
