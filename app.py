@@ -4,7 +4,7 @@ import streamlit as st
 # Usa l'ID numerico che abbiamo visto nella foto
 client_id = "22771" 
 # Il redirect deve essere identico a quello nel portale (con la barra finale)
-redirect_uri = "https://forex-flow-app.streamlit.app/"
+redirect_uri = "https://forex-flow-app.streamlit.app/?login=true"
 
 st.title("🔌 Connessione G8 Flow")
 
