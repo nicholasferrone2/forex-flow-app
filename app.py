@@ -1,7 +1,7 @@
 import streamlit as st
 
 # --- DATI DA CONTROLLARE CON CURA ---
-CLIENT_ID = "22771" 
+CLIENT_ID = "22771_mJTHafTpA4Fb4CNKAMARYKOBhoQ5JmZAhoS1nooXLTEQ8cH9Aq" 
 CLIENT_SECRET = "o5nz4SfbkWJ3CPXAVkyf57EkgF8wUIP8OUKOKVliamqpeCZaFb"
 REDIRECT_URI = "https://forex-flow-app.streamlit.app/"
 
