@@ -1,27 +1,24 @@
 import streamlit as st
-import yfinance as yf
-import pandas as pd
-import plotly.express as px
-import numpy as np
 import requests
 import json
+import yfinance as yf
+import pandas as pd
+import numpy as np
+import plotly.express as px
 
-# 1. CONFIGURAZIONE PAGINA
+# --- CONFIGURAZIONE E SECRETS ---
 st.set_page_config(page_title="G8 Flow - TotalFX", layout="wide")
 
-# 2. RECUPERO SECRETS E CONFIGURAZIONE API
 try:
-    TOKEN = st.secrets["TELEGRAM_TOKEN"]
-    CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-    # Pulizia automatica da eventuali spazi bianchi nei secrets
     client_id = st.secrets["CTRADER_CLIENT_ID"].strip()
     client_secret = st.secrets["CTRADER_CLIENT_SECRET"].strip()
     account_id = st.secrets["CTRADER_ACCOUNT_ID"].strip()
+    TOKEN = st.secrets["TELEGRAM_TOKEN"].strip()
+    CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"].strip()
     
-    # URL preciso senza barra finale per evitare errore 400
-    redirect_uri = "https://forex-flow-app.streamlit.app" 
+    # URL di Redirect (Deve essere IDENTICO a quello nel portale Spotware)
+    redirect_uri = "https://forex-flow-app.streamlit.app/" 
     
-    # URL di Autenticazione con scope separati da %20 (spazio) invece della virgola
     auth_url = (
         f"https://openapi.ctrader.com/apps/auth"
         f"?client_id={client_id}"
@@ -29,10 +26,10 @@ try:
         f"&scope=accounts%20trading"
     )
 except Exception as e:
-    st.error(f"⚠️ Errore nei Secrets o Configurazione: {e}")
+    st.error(f"Configurazione incompleta: {e}")
     st.stop()
 
-# 3. FUNZIONI TECNICHE (TOKEN ED ESECUZIONE)
+# --- FUNZIONI API ---
 
 def get_access_token(auth_code):
     url = "https://openapi.ctrader.com/apps/token"
@@ -43,86 +40,30 @@ def get_access_token(auth_code):
         "client_secret": client_secret,
         "redirect_uri": redirect_uri
     }
-    response = requests.post(url, data=data)
-    return response.json()
+    return requests.post(url, data=data).json()
 
-def execute_trade(symbol, side, volume, tp_pips):
-    if 'access_token' not in st.session_state:
-        return {"error": "Broker non connesso"}
-    
-    clean_symbol = symbol.replace("=X", "")
-    url = f"https://openapi.ctrader.com/apps/trade/v2/accounts/{account_id}/orders"
-    headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
-    
-    payload = {
-        "symbolName": clean_symbol,
-        "orderType": "MARKET",
-        "tradeSide": side,
-        "volume": int(volume * 100000), # 0.1 lotti = 10k unità
-        "takeProfit": tp_pips
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
-
-def send_telegram_trade_signal(pair, action, lot, tp):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    messaggio = (
-        f"🚀 **G8 FLOW ALERT**\n\n"
-        f"🔹 Asset: **{pair}**\n"
-        f"🔹 Direzione: **{action}**\n"
-        f"🔹 Volume: **{lot} Lotti**\n"
-        f"🔹 Take Profit: **{tp} Pips**\n"
-        f"🔹 Stop Loss: **None**\n\n"
-        f"Confermi l'invio dell'ordine?"
-    )
-    keyboard = {
-        "inline_keyboard": [[
-            {"text": f"✅ Esegui {action}", "callback_data": f"trade_{action}_{pair}_{lot}_{tp}"},
-            {"text": "❌ Ignora", "callback_data": "ignore"}
-        ]]
-    }
-    payload = {"chat_id": CHAT_ID, "text": messaggio, "reply_markup": json.dumps(keyboard), "parse_mode": "Markdown"}
-    requests.post(url, data=payload)
-
-# 4. LOGICA DI AUTENTICAZIONE NELLA SIDEBAR
+# --- INTERFACCIA ---
 st.sidebar.header("🔌 Connessione Broker")
 
-# Gestione del ritorno dal login
+# Cattura il codice di ritorno da cTrader
 if "code" in st.query_params:
     auth_code = st.query_params["code"]
     if 'access_token' not in st.session_state:
-        with st.sidebar:
-            with st.spinner("Connessione in corso..."):
-                token_data = get_access_token(auth_code)
-                if "access_token" in token_data:
-                    st.session_state.access_token = token_data["access_token"]
-                    st.success("✅ Broker Connesso!")
-                else:
-                    st.error(f"❌ Errore Token: {token_data.get('error_description', 'Sconosciuto')}")
+        token_data = get_access_token(auth_code)
+        if "access_token" in token_data:
+            st.session_state.access_token = token_data["access_token"]
+            st.sidebar.success("✅ Connesso!")
+        else:
+            st.sidebar.error("Errore nel recupero del Token")
 
 if 'access_token' not in st.session_state:
-    st.sidebar.link_button("🔗 Connetti a TotalFX", auth_url)
+    st.sidebar.link_button("🔗 Connetti a cTrader", auth_url)
 else:
-    st.sidebar.success("✅ Account TotalFX Attivo")
+    st.sidebar.success("✅ Account Attivo")
 
-st.sidebar.divider()
-
-# 5. PARAMETRI DI TRADING (Richiesti: 0.1 lot, 5 TP)
-st.sidebar.subheader("🤖 Stato Bot")
-bot_attivo = st.sidebar.toggle("Attiva Trading Automatico", value=False)
-
-st.sidebar.subheader("⚙️ Parametri Ordine")
-lotti = st.sidebar.number_input("Volume (Lotti):", min_value=0.01, value=0.10, step=0.01)
-tp_pips = st.sidebar.number_input("Take Profit (Pips):", min_value=1, value=5, step=1)
-st.sidebar.caption("Stop Loss: Disabilitato")
-
-if st.sidebar.button("🧪 Simula Segnale G8"):
-    send_telegram_trade_signal("EURUSD", "BUY", lotti, tp_pips)
-    st.sidebar.info("Test inviato su Telegram")
+# ... (Qui puoi aggiungere il resto del codice G8 Flow che avevi prima) ...
+st.title("📊 G8 Flow Monitor")
+st.info("App pronta per il collegamento. Clicca sul tasto nella sidebar.")
 
 # 6. ANALISI G8 E GRAFICO
 st.title("📊 G8 Flow Monitor")
