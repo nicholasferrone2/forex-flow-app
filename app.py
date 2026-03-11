@@ -1,157 +1,136 @@
 import streamlit as st
-import requests
-import json
 import yfinance as yf
 import pandas as pd
-import numpy as np
 import plotly.express as px
+import numpy as np
+import requests
+import json
 
 # 1. CONFIGURAZIONE PAGINA
-st.set_page_config(page_title="G8 Flow - TotalFX", layout="wide")
+st.set_page_config(page_title="G8 Pro Trader", layout="wide")
 
-# 2. RECUPERO SECRETS E PULIZIA DATI
+# 2. RECUPERO SECRETS
 try:
-    # Usiamo .strip() per eliminare spazi invisibili che causano l'errore 400
-    client_id = st.secrets["CTRADER_CLIENT_ID"].strip()
-    client_secret = st.secrets["CTRADER_CLIENT_SECRET"].strip()
-    account_id = st.secrets["CTRADER_ACCOUNT_ID"].strip()
-    telegram_token = st.secrets["TELEGRAM_TOKEN"].strip()
-    telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"].strip()
-    
-    # Questo deve essere IDENTICO a quello nel portale Spotware Connect
-    redirect_uri = "https://forex-flow-app.streamlit.app/" 
-    
-    # Costruzione URL con separatore %20 per gli scopes (standard ufficiale)
-    auth_url = (
-        f"https://openapi.ctrader.com/apps/auth"
-        f"?client_id={client_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&scope=accounts%20trading"
-    )
+    TOKEN = st.secrets["TELEGRAM_TOKEN"]
+    CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
+    client_id = st.secrets["CTRADER_CLIENT_ID"]
+    client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
 except Exception as e:
     st.error(f"⚠️ Errore nei Secrets: {e}")
     st.stop()
 
-# 3. FUNZIONI TECNICHE
-def get_access_token(auth_code):
-    url = "https://openapi.ctrader.com/apps/token"
-    data = {
-        "grant_type": "authorization_code",
-        "code": auth_code,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri
-    }
-    response = requests.post(url, data=data)
-    return response.json()
-
-def send_telegram_signal(pair, action, lot, tp):
-    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
-    text = f"🚀 **G8 FLOW ALERT**\n\nAsset: {pair}\nAction: {action}\nVolume: {lot}\nTP: {tp} pips"
-    keyboard = {"inline_keyboard": [[
-        {"text": "✅ Esegui", "callback_data": f"exec_{pair}_{action}"},
-        {"text": "❌ Ignora", "callback_data": "ignore"}
-    ]]}
-    payload = {"chat_id": telegram_chat_id, "text": text, "reply_markup": json.dumps(keyboard), "parse_mode": "Markdown"}
-    requests.post(url, data=payload)
-
-# 4. SIDEBAR E AUTENTICAZIONE
-st.sidebar.header("🔌 Broker Connection")
-
-# Gestione del ritorno dal Login
-query_params = st.query_params
-if "code" in query_params:
-    auth_code = query_params["code"]
-    if 'access_token' not in st.session_state:
-        with st.sidebar:
-            with st.spinner("Scambio codice con Token..."):
-                res = get_access_token(auth_code)
-                if "access_token" in res:
-                    st.session_state.access_token = res["access_token"]
-                    st.success("✅ Connesso!")
-                else:
-                    st.error(f"Errore Token: {res.get('error_description', 'Rifiutato')}")
-
-# Tasto di Connessione
-if 'access_token' not in st.session_state:
-    st.sidebar.link_button("🔗 Connetti a TotalFX", auth_url, help="Clicca per autorizzare l'app su cTrader")
+# 3. FUNZIONE INVIO TELEGRAM (POTENZIATA)
+def send_telegram_trade_signal(pair, action, lot, tp):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
     
-    # SEZIONE DEBUG (Solo se non connesso)
-    with st.sidebar.expander("🔍 Debug Configurazione"):
-        st.write("**Verifica questi dati col Portale Spotware:**")
-        st.code(f"Client ID: {client_id}")
-        st.code(f"Redirect URI: {redirect_uri}")
-        st.write("**URL Completo inviato:**")
-        st.code(auth_url)
+    messaggio = (
+        f"🚀 **G8 FLOW ALERT**\n\n"
+        f"🔹 Asset: **{pair}**\n"
+        f"🔹 Direzione: **{action}**\n"
+        f"🔹 Volume: **{lot} Lotti**\n"
+        f"🔹 Take Profit: **{tp} Pips**\n"
+        f"🔹 Stop Loss: **NON IMPOSTATO**\n\n"
+        f"Vuoi inviare l'ordine a Pepperstone?"
+    )
+    
+    # I dati dell'ordine vengono "impacchettati" nel bottone
+    keyboard = {
+        "inline_keyboard": [[
+            {"text": f"✅ Esegui {action} {pair}", "callback_data": f"trade_{action}_{pair}_{lot}_{tp}"},
+            {"text": "❌ Ignora", "callback_data": "ignore"}
+        ]]
+    }
+    
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": messaggio,
+        "reply_markup": json.dumps(keyboard),
+        "parse_mode": "Markdown"
+    }
+    try:
+        requests.post(url, data=payload, timeout=5)
+    except:
+        pass
+
+# 4. INTERFACCIA SIDEBAR
+st.sidebar.header("🔌 Connessione Broker")
+
+# Logica tasto connessione cTrader
+redirect_uri = "https://tua-app.streamlit.app/" # Ricorda di aggiornare questo!
+auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
+
+if "code" in st.query_params:
+    st.sidebar.success("✅ Autorizzazione Ricevuta!")
 else:
-    st.sidebar.success(f"✅ Account {account_id} Attivo")
-    if st.sidebar.button("Esci / Log out"):
-        del st.session_state.access_token
-        st.rerun()
+    st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
 
 st.sidebar.divider()
 
-# 5. PARAMETRI TRADING (Personalizzati: 0.1 lot, 5 TP)
-st.sidebar.subheader("⚙️ Parametri")
-lotti = st.sidebar.number_input("Lotti", value=0.1, step=0.01)
-tp_pips = st.sidebar.number_input("Take Profit (pips)", value=5)
-bot_attivo = st.sidebar.toggle("Bot Attivo", value=False)
+# --- CAMPI INPUT PER TRADING ---
+st.sidebar.subheader("⚙️ Parametri Ordine")
+lotti = st.sidebar.number_input("Volume (Lotti):", min_value=0.01, max_value=5.0, value=0.10, step=0.01)
+tp_pips = st.sidebar.number_input("Take Profit (Pips):", min_value=0, max_value=500, value=20)
+st.sidebar.info("Nota: Lo Stop Loss è disattivato.")
 
-if st.sidebar.button("🧪 Test Telegram"):
-    send_telegram_signal("EURUSD", "BUY", lotti, tp_pips)
+# Tasto Test
+if st.sidebar.button("🧪 Simula Segnale G8"):
+    send_telegram_trade_signal("EURUSD", "BUY", lotti, tp_pips)
+    st.sidebar.success("Test inviato!")
 
-# 6. LOGICA ANALISI G8
-st.title("📊 G8 Flow Monitor")
+st.sidebar.divider()
+tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
+
+# 5. TITOLO E LOGICA G8
+st.title("📊 G8 Flow Monitor & Execution")
 
 pairs = ['EURUSD=X','GBPUSD=X','USDJPY=X','AUDUSD=X','USDCAD=X','USDCHF=X','NZDUSD=X']
 
-@st.cache_data(ttl=60)
-def get_g8_data():
-    data = yf.download(pairs, period="5d", interval="15m", group_by='ticker', progress=False)
+@st.cache_data(ttl=30)
+def fetch_strength(tf, prd):
+    period_map = {"1m": "1d", "5m": "5d", "15m": "5d", "1h": "60d"}
+    data = yf.download(pairs, period=period_map[tf], interval=tf, group_by='ticker', progress=False)
     df_close = pd.DataFrame()
     for p in pairs:
         if p in data: df_close[p] = data[p]['Close']
     df_close = df_close.ffill().dropna()
+    if df_close.empty: return pd.DataFrame()
+    
     rets = np.log(df_close / df_close.shift(1)).dropna()
     s = pd.DataFrame(index=rets.index)
     s['EUR'] = rets['EURUSD=X']; s['GBP'] = rets['GBPUSD=X']; s['JPY'] = -rets['USDJPY=X']
     s['AUD'] = rets['AUDUSD=X']; s['CAD'] = -rets['USDCAD=X']; s['CHF'] = -rets['USDCHF=X']
     s['NZD'] = rets['NZDUSD=X']; s['USD'] = -s.mean(axis=1)
-    strength = s.cumsum()
-    return (strength - strength.mean()) / strength.std() * 20
+    
+    strength_cum = s.cumsum()
+    return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
 
+# 6. GRAFICO E ANALISI SEGNALI REAL-TIME
 try:
-    v_final = get_g8_data()
+    v_final = fetch_strength(tf_main, "5d")
+    
     if not v_final.empty:
-        # Grafico
-        v_plot = v_final.tail(100).reset_index()
-        df_p = v_plot.melt(id_vars='Date' if 'Date' in v_plot.columns else v_plot.columns[0], var_name='Valuta', value_name='Forza')
-        fig = px.line(df_p, x=df_p.columns[0], y='Forza', color='Valuta', template="plotly_dark")
-        fig.add_hline(y=35, line_dash="dash", line_color="green")
-        fig.add_hline(y=-35, line_dash="dash", line_color="red")
+        # Grafico Plotly
+        v_plot = v_final.tail(80).reset_index()
+        v_plot.columns.values[0] = 'Data' 
+        df_p = v_plot.melt(id_vars='Data', var_name='Valuta', value_name='Forza')
+        fig = px.line(df_p, x='Data', y='Forza', color='Valuta', template="plotly_dark")
+        fig.update_layout(yaxis=dict(range=[-75, 75]), height=600)
         st.plotly_chart(fig, use_container_width=True)
+
+        # Analisi Segnali
+        last, prev = v_final.iloc[-1], v_final.iloc[-2]
+        threshold = 35 
         
-        # Logica Segnale
-        last = v_final.iloc[-1]
-        st.write("### Forza Attuale")
-        st.dataframe(last.to_frame().T)
-        # --- LOGICA ALERT AUTOMATICI G8 ---
-        if bot_attivo:
-            st.write("🤖 **Bot in scansione...**")
-            for valuta, forza in last.items():
-                # Definiamo la coppia di riferimento (es. EUR diventa EURUSD)
-                coppia_alert = f"{valuta}USD" if valuta != "USD" else "EURUSD"
-                
-                if forza > 35:
-                    st.warning(f"🚨 {valuta} in Ipercomprato ({forza:.2f})")
-                    send_telegram_signal(coppia_alert, "SELL", lotti, tp_pips)
-                    st.toast(f"Alert inviato per {valuta}!")
-                    
-                elif forza < -35:
-                    st.success(f"🚨 {valuta} in Ipervenduto ({forza:.2f})")
-                    send_telegram_signal(coppia_alert, "BUY", lotti, tp_pips)
-                    st.toast(f"Alert inviato per {valuta}!")
-        else:
-            st.info("💡 Attiva il 'Bot Attivo' nella sidebar per inviare alert automatici.")
+        bulls = [c for c in v_final.columns if prev[c] < -threshold and last[c] > prev[c]]
+        bears = [c for c in v_final.columns if prev[c] > threshold and last[c] < prev[c]]
+
+        if bulls and bears:
+            for b_up in bulls:
+                for b_down in bears:
+                    pair_name = f"{b_up}{b_down}"
+                    st.success(f"🔥 Segnale rilevato: {pair_name}")
+                    # Invio automatico con i parametri della sidebar
+                    send_telegram_trade_signal(pair_name, "BUY", lotti, tp_pips)
+
 except Exception as e:
-    st.error(f"Errore nel calcolo G8: {e}")
+    st.error(f"Errore: {e}")
