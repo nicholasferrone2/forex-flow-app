@@ -13,15 +13,21 @@ st.set_page_config(page_title="G8 Flow - TotalFX", layout="wide")
 try:
     TOKEN = st.secrets["TELEGRAM_TOKEN"]
     CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-    client_id = st.secrets["CTRADER_CLIENT_ID"]
-    client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
-    account_id = st.secrets["CTRADER_ACCOUNT_ID"]
+    # Pulizia automatica da eventuali spazi bianchi nei secrets
+    client_id = st.secrets["CTRADER_CLIENT_ID"].strip()
+    client_secret = st.secrets["CTRADER_CLIENT_SECRET"].strip()
+    account_id = st.secrets["CTRADER_ACCOUNT_ID"].strip()
     
-    # INDIRIZZO APP (Deve essere identico a quello su Spotware Connect)
-    # Esempio: "https://nome-tua-app.streamlit.app/"
-    redirect_uri = "https://forex-flow-app.streamlit.app/" 
+    # URL preciso senza barra finale per evitare errore 400
+    redirect_uri = "https://forex-flow-app.streamlit.app" 
     
-    auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
+    # URL di Autenticazione con scope separati da %20 (spazio) invece della virgola
+    auth_url = (
+        f"https://openapi.ctrader.com/apps/auth"
+        f"?client_id={client_id}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope=accounts%20trading"
+    )
 except Exception as e:
     st.error(f"⚠️ Errore nei Secrets o Configurazione: {e}")
     st.stop()
@@ -44,9 +50,7 @@ def execute_trade(symbol, side, volume, tp_pips):
     if 'access_token' not in st.session_state:
         return {"error": "Broker non connesso"}
     
-    # Adattamento simbolo per TotalFX
     clean_symbol = symbol.replace("=X", "")
-    
     url = f"https://openapi.ctrader.com/apps/trade/v2/accounts/{account_id}/orders"
     headers = {"Authorization": f"Bearer {st.session_state.access_token}"}
     
@@ -98,7 +102,7 @@ if "code" in st.query_params:
                     st.session_state.access_token = token_data["access_token"]
                     st.success("✅ Broker Connesso!")
                 else:
-                    st.error("❌ Errore Token")
+                    st.error(f"❌ Errore Token: {token_data.get('error_description', 'Sconosciuto')}")
 
 if 'access_token' not in st.session_state:
     st.sidebar.link_button("🔗 Connetti a TotalFX", auth_url)
@@ -128,19 +132,22 @@ pairs = ['EURUSD=X','GBPUSD=X','USDJPY=X','AUDUSD=X','USDCAD=X','USDCHF=X','NZDU
 @st.cache_data(ttl=30)
 def fetch_strength(tf):
     period_map = {"1m": "1d", "5m": "5d", "15m": "5d", "1h": "60d"}
-    data = yf.download(pairs, period=period_map[tf], interval=tf, group_by='ticker', progress=False)
-    df_close = pd.DataFrame()
-    for p in pairs:
-        if p in data: df_close[p] = data[p]['Close']
-    df_close = df_close.ffill().dropna()
-    if df_close.empty: return pd.DataFrame()
-    rets = np.log(df_close / df_close.shift(1)).dropna()
-    s = pd.DataFrame(index=rets.index)
-    s['EUR'] = rets['EURUSD=X']; s['GBP'] = rets['GBPUSD=X']; s['JPY'] = -rets['USDJPY=X']
-    s['AUD'] = rets['AUDUSD=X']; s['CAD'] = -rets['USDCAD=X']; s['CHF'] = -rets['USDCHF=X']
-    s['NZD'] = rets['NZDUSD=X']; s['USD'] = -s.mean(axis=1)
-    strength_cum = s.cumsum()
-    return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
+    try:
+        data = yf.download(pairs, period=period_map[tf], interval=tf, group_by='ticker', progress=False)
+        df_close = pd.DataFrame()
+        for p in pairs:
+            if p in data: df_close[p] = data[p]['Close']
+        df_close = df_close.ffill().dropna()
+        if df_close.empty: return pd.DataFrame()
+        rets = np.log(df_close / df_close.shift(1)).dropna()
+        s = pd.DataFrame(index=rets.index)
+        s['EUR'] = rets['EURUSD=X']; s['GBP'] = rets['GBPUSD=X']; s['JPY'] = -rets['USDJPY=X']
+        s['AUD'] = rets['AUDUSD=X']; s['CAD'] = -rets['USDCAD=X']; s['CHF'] = -rets['USDCHF=X']
+        s['NZD'] = rets['NZDUSD=X']; s['USD'] = -s.mean(axis=1)
+        strength_cum = s.cumsum()
+        return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
+    except:
+        return pd.DataFrame()
 
 try:
     v_final = fetch_strength("15m")
