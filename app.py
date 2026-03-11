@@ -19,7 +19,7 @@ try:
     account_id = st.secrets["CTRADER_ACCOUNT_ID"].strip()
     
     # URL preciso senza barra finale per evitare errore 400
-    redirect_uri = "https://forex-flow-app.streamlit.app/" 
+    redirect_uri = "https://forex-flow-app.streamlit.app" 
     
     # URL di Autenticazione con scope separati da %20 (spazio) invece della virgola
     auth_url = (
