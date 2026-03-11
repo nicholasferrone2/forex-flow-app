@@ -1,3 +1,4 @@
+import streamlit as st
 # --- TEST RICEZIONE SEGNALE ESTERNO ---
 st.divider()
 st.subheader("📡 Test Ricezione Segnale (Simulazione Webhook)")
