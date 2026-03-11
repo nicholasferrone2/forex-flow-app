@@ -135,5 +135,23 @@ try:
         last = v_final.iloc[-1]
         st.write("### Forza Attuale")
         st.dataframe(last.to_frame().T)
+        # --- LOGICA ALERT AUTOMATICI G8 ---
+        if bot_attivo:
+            st.write("🤖 **Bot in scansione...**")
+            for valuta, forza in last.items():
+                # Definiamo la coppia di riferimento (es. EUR diventa EURUSD)
+                coppia_alert = f"{valuta}USD" if valuta != "USD" else "EURUSD"
+                
+                if forza > 35:
+                    st.warning(f"🚨 {valuta} in Ipercomprato ({forza:.2f})")
+                    send_telegram_signal(coppia_alert, "SELL", lotti, tp_pips)
+                    st.toast(f"Alert inviato per {valuta}!")
+                    
+                elif forza < -35:
+                    st.success(f"🚨 {valuta} in Ipervenduto ({forza:.2f})")
+                    send_telegram_signal(coppia_alert, "BUY", lotti, tp_pips)
+                    st.toast(f"Alert inviato per {valuta}!")
+        else:
+            st.info("💡 Attiva il 'Bot Attivo' nella sidebar per inviare alert automatici.")
 except Exception as e:
     st.error(f"Errore nel calcolo G8: {e}")
