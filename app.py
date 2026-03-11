@@ -2,7 +2,7 @@ import streamlit as st
 
 # CONFIGURAZIONE ALLINEATA
 CLIENT_ID = "22771"
-CLIENT_SECRET = "IL_TUO_SECRET" # Mettilo con cura
+CLIENT_SECRET = "o5nz4SfbkWJ3CPXAVkyf57EkgF8wUIP8OUKOKVliamqpeCZaFb" # Mettilo con cura
 # Senza lo slash finale come su Spotware
 REDIRECT_URI = "https://forex-flow-app.streamlit.app" 
 
