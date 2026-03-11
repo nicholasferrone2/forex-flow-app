@@ -19,7 +19,7 @@ try:
     telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"].strip()
     
     # Questo deve essere IDENTICO a quello nel portale Spotware Connect
-    redirect_uri = "https://forex-flow-app.streamlit.app/" 
+    redirect_uri = "https://connect.spotware.com/apps/22771/playground" 
     
     # Costruzione URL con separatore %20 per gli scopes (standard ufficiale)
     auth_url = (
