@@ -159,11 +159,11 @@ def fetch_strength(tf, prd):
     strength_cum = s.cumsum()
     return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
 
-# 6. LOGICA DI INVIO E MONITORAGGIO (DA SOSTITUIRE INTEGRALMENTE)
+# 6. GRAFICO E ANALISI CON MEMORIA PERSISTENTE (Versione Definitiva)
 try:
     v_final = fetch_strength(tf_main, "5d")
     
-    # --- LOGICA MEMORIA PERSISTENTE (Anti-Spam) ---
+    # --- QUI INIZIA IL PEZZO DA SOSTITUIRE ---
     LOG_FILE = "sent_signals_log.json"
     
     def load_signals():
@@ -174,11 +174,20 @@ try:
             except: return {}
         return {}
 
-    def save_signal(sig_id):
-        signals = load_signals()
-        signals[sig_id] = datetime.now().isoformat()
+    def save_session_data(sig_id=None):
+        data = load_signals() 
+        if sig_id:
+            data[sig_id] = datetime.now().isoformat()
+        if 'refresh_token' in st.session_state:
+            data['stored_refresh_token'] = st.session_state.refresh_token
         with open(LOG_FILE, "w") as f:
-            json.dump(signals, f)
+            json.dump(data, f)
+
+    # Recupero automatico del token al riavvio
+    if 'refresh_token' not in st.session_state:
+        saved_data = load_signals()
+        if 'stored_refresh_token' in saved_data:
+            st.session_state.refresh_token = saved_data['stored_refresh_token']
 
     if not v_final.empty:
         # --- GRAFICO CON FASCE COLORATE ---
