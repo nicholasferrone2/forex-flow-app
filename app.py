@@ -34,12 +34,20 @@ take_profit_pips = 5    # Come richiesto
 
 SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP']
 
-def send_test_order():
-    # URL Corretto per il server Open API Proxy
-    url = "https://live-api.ctrader.com/v2/symbols/1/order" 
-    # Proviamo anche l'alternativa se il primo fallisce: 
-    # https://openapi.ctrader.com/tradingapi/v2/symbols/1/order
+# --- 4. FUNZIONI CORE ---
 
+def send_telegram_msg(message):
+    try:
+        url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+        data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
+        requests.post(url, data=data, timeout=10)
+    except Exception as e:
+        st.error(f"Errore Telegram: {e}")
+
+def send_test_order():
+    # URL universale per Pepperstone/cTrader Open API
+    url = "https://openapi.ctrader.com/tradingapi/v2/symbols/1/order" 
+    
     headers = {
         "Authorization": f"Bearer {st.session_state.get('access_token')}",
         "Content-Type": "application/json"
@@ -54,13 +62,12 @@ def send_test_order():
         "symbolId": 1, 
         "orderType": "MARKET",
         "tradeSide": "BUY",
-        "volume": 10000,         # 0.10 lotti
-        "takeProfit": 50,        # 5 pips
+        "volume": 10000,         # 0.10 lotti = 10.000 unità
+        "takeProfit": 50,        # 5 pips = 50 punti
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
-        # Usiamo un timeout leggermente più lungo per il broker
         response = requests.post(url, json=payload, headers=headers, timeout=20)
         return response
     except Exception as e:
@@ -71,13 +78,14 @@ st.sidebar.header("🔌 Connessione Broker")
 
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 
-# Tasto di connessione Streamlit nativo
+# Tasto di connessione
 st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url, use_container_width=True)
 
 # Gestione del ritorno dal Login
 if "code" in st.query_params:
     if "access_token" not in st.session_state:
         code = st.query_params["code"]
+        # Assicurati che manage_tokens sia definita nella sezione precedente (2)
         data = manage_tokens(auth_code=code)
         if data and "accessToken" in data:
             st.session_state.access_token = data["accessToken"]
@@ -95,23 +103,23 @@ with col1:
 
 with col2:
     st.subheader("Stato Bot")
-    if st.session_state.get("access_token"):
+    if "access_token" in st.session_state and st.session_state.access_token:
         st.write("🟢 Trading Automatico Pronto")
-        
         st.divider()
-        # Pulsante nella Sidebar per il test
+        
+        # Tasto per inviare l'ordine di test
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
-            
             if risultato is not None:
                 if risultato.status_code == 200:
-                    st.sidebar.success("🚀 Ordine eseguito!")
-                    send_telegram_msg(f"✅ Ordine 0.1 lot inviato con successo su conto {account_id}")
+                    st.sidebar.success("🚀 Ordine inviato!")
+                    send_telegram_msg(f"✅ Eseguito ordine test 0.1 lot su Pepperstone ({account_id})")
                 else:
                     st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
-                    # Mostra il dettaglio dell'errore (molto utile se è ancora 404)
                     st.sidebar.code(risultato.text[:150])
             else:
                 st.sidebar.error("❌ Connessione fallita")
     else:
-        st.write("🔴 Attesa Connessione Broker")
+        st.write("🔴 Attesa Connessione")
+
+st.write(f"Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')}")
