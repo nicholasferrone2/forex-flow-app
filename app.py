@@ -208,27 +208,37 @@ try:
         bulls = [c for c in v_final.columns if prev[c] < -threshold and last[c] > prev[c]]
         bears = [c for c in v_final.columns if prev[c] > threshold and last[c] < prev[c]]
 
+        # --- ANALISI SEGNALI E INVIO ---
         if bulls and bears:
-            sent_signals = load_signals()
+            sent_signals = load_signals() # Carica i dati dal file JSON
+            
             for b_up in bulls:
                 for b_down in bears:
                     pair_name = f"{b_up}{b_down}"
                     signal_id = f"{pair_name}_BUY"
                     
-                    # Controllo temporale 60 minuti
+                    # Controllo se il segnale è stato inviato meno di 60 minuti fa
                     can_send = True
                     if signal_id in sent_signals:
-                        last_sent = datetime.fromisoformat(sent_signals[signal_id])
-                        if datetime.now() - last_sent < timedelta(minutes=60):
-                            can_send = False
+                        try:
+                            last_sent = datetime.fromisoformat(sent_signals[signal_id])
+                            if datetime.now() - last_sent < timedelta(minutes=60):
+                                can_send = False
+                        except: pass # Se l'orario è corrotto, invia comunque
                     
                     if can_send:
                         st.success(f"🚀 SEGNALE RILEVATO: {pair_name}")
-                        # INVIO A TELEGRAM CON I PARAMETRI FISSI (0.1 e 15)
+                        
+                        # Invia il segnale a Telegram con 0.1 lotti e 15 pips
                         send_telegram_trade_signal(pair_name, "BUY", lotti, tp_pips)
-                        save_signal(signal_id)
+                        
+                        # Salva l'orario del segnale E il Refresh Token nel file
+                        save_session_data(signal_id) 
+                        
                     else:
-                        st.info(f"⏳ {pair_name} già inviato. Attendo scadenza filtro 60min.")
+                        st.info(f"⏳ {pair_name} già inviato. Filtro 60min attivo.")
+        else:
+            st.info("🔎 Monitoraggio attivo: nessuna valuta in zona estrema al momento.")
 
 except Exception as e:
-    st.error(f"Errore Sezione 6: {e}")
+    st.error(f"Errore nel monitoraggio segnali: {e}")
