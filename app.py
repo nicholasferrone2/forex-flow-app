@@ -42,34 +42,36 @@ def send_telegram_msg(message):
         data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
         requests.post(url, data=data, timeout=10)
     except Exception as e:
-        st.error(f"Errore invio Telegram: {e}")
+        st.error(f"Errore Telegram: {e}")
 
 def send_test_order():
-    # URL per invio ordini (Usa 'live' al posto di 'training' se il conto è reale)
-    url = f"https://openapi.ctrader.com/tradingapi/v2/training/accounts/{account_id}/orders"
+    # URL di base - Se il tuo conto è LIVE, cambia 'training' in 'live'
+    base_url = "https://openapi.ctrader.com/tradingapi/v2/training"
+    endpoint = f"/accounts/{account_id}/orders"
+    url = base_url + endpoint
     
     headers = {
         "Authorization": f"Bearer {st.session_state.get('access_token')}",
         "Content-Type": "application/json"
     }
     
-    # Costruzione del comando secondo lo standard cTrader Open API
+    # Payload standard per cTrader Open API v2
     payload = {
         "payloadType": "PROTO_OA_NEW_ORDER_REQ",
         "ctidTraderAccountId": account_id,
-        "symbolId": 1,           # Di solito 1 è EURUSD
+        "symbolId": "1",         # 1 è solitamente EURUSD
         "orderType": "MARKET",
-        "tradeSide": "BUY",      # Test di acquisto
-        "volume": 10000,         # 0.10 lotti = 10.000 unità
-        "takeProfit": 50,        # 5 pips = 50 punti (pips * 10)
+        "tradeSide": "BUY",
+        "volume": 10000,         # 10.000 unità = 0.10 lotti
+        "takeProfit": 50,        # 5 pips (espresso in punti)
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
+        # Usiamo il metodo POST per inviare l'ordine
         response = requests.post(url, json=payload, headers=headers, timeout=15)
         return response
     except Exception as e:
-        print(f"Errore critico durante la richiesta: {e}")
         return None
 
 # --- 5. INTERFACCIA SIDEBAR E CONNESSIONE ---
