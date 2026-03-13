@@ -107,11 +107,11 @@ def fetch_strength(tf, prd):
     strength_cum = s.cumsum()
     return (strength_cum - strength_cum.mean()) / strength_cum.std() * 20
 
-# 6. GRAFICO E ANALISI CON MEMORIA PERSISTENTE (Anti-Spam 60 min)
+# 6. LOGICA DI INVIO E MONITORAGGIO (DA SOSTITUIRE INTEGRALMENTE)
 try:
     v_final = fetch_strength(tf_main, "5d")
     
-    # --- LOGICA MEMORIA PERSISTENTE ---
+    # --- LOGICA MEMORIA PERSISTENTE (Anti-Spam) ---
     LOG_FILE = "sent_signals_log.json"
     
     def load_signals():
@@ -129,38 +129,32 @@ try:
             json.dump(signals, f)
 
     if not v_final.empty:
-        # --- GRAFICO CON FASCE COLORATE PIENE ---
+        # --- GRAFICO CON FASCE COLORATE ---
         v_plot = v_final.tail(80).reset_index()
         v_plot.columns.values[0] = 'Data' 
         df_p = v_plot.melt(id_vars='Data', var_name='Valuta', value_name='Forza')
-        
         fig = px.line(df_p, x='Data', y='Forza', color='Valuta', template="plotly_dark")
         
         threshold = 35
-        # Fascia ROSSA superiore
-        fig.add_hrect(y0=threshold, y1=75, fillcolor="red", opacity=0.2, line_width=0, 
-                      annotation_text="IPERCOMPRATO", annotation_position="top left")
-        # Fascia VERDE inferiore
-        fig.add_hrect(y0=-75, y1=-threshold, fillcolor="green", opacity=0.2, line_width=0, 
-                      annotation_text="IPERVENDUTO", annotation_position="bottom left")
+        fig.add_hrect(y0=threshold, y1=75, fillcolor="red", opacity=0.2, line_width=0, annotation_text="IPERCOMPRATO")
+        fig.add_hrect(y0=-75, y1=-threshold, fillcolor="green", opacity=0.2, line_width=0, annotation_text="IPERVENDUTO")
         
         fig.update_layout(yaxis=dict(range=[-75, 75]), height=600)
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- ANALISI E FILTRO ANTI-SPAM (60 MINUTI) ---
+        # --- ANALISI SEGNALI ---
         last, prev = v_final.iloc[-1], v_final.iloc[-2]
         bulls = [c for c in v_final.columns if prev[c] < -threshold and last[c] > prev[c]]
         bears = [c for c in v_final.columns if prev[c] > threshold and last[c] < prev[c]]
 
-        st.write("### 📢 Monitor Segnali")
-        
         if bulls and bears:
             sent_signals = load_signals()
             for b_up in bulls:
                 for b_down in bears:
                     pair_name = f"{b_up}{b_down}"
-                    signal_id = f"{pair_name}_BUY" # Identificatore unico
+                    signal_id = f"{pair_name}_BUY"
                     
+                    # Controllo temporale 60 minuti
                     can_send = True
                     if signal_id in sent_signals:
                         last_sent = datetime.fromisoformat(sent_signals[signal_id])
@@ -168,14 +162,12 @@ try:
                             can_send = False
                     
                     if can_send:
-                        st.success(f"🚀 INVIO SEGNALE TELEGRAM: {pair_name}")
-                        # Invia con i tuoi parametri fissi: 0.1 lotti e 5 pips (presi dalla sidebar)
+                        st.success(f"🚀 SEGNALE RILEVATO: {pair_name}")
+                        # INVIO A TELEGRAM CON I PARAMETRI FISSI (0.1 e 15)
                         send_telegram_trade_signal(pair_name, "BUY", lotti, tp_pips)
                         save_signal(signal_id)
                     else:
-                        st.info(f"⏳ {pair_name} già segnalato. Silenziatore attivo per 60 min.")
-        else:
-            st.info("🔎 Mercato in zona neutra. Nessun segnale rilevato.")
+                        st.info(f"⏳ {pair_name} già inviato. Attendo scadenza filtro 60min.")
 
 except Exception as e:
-    st.error(f"Errore nel monitoraggio: {e}")
+    st.error(f"Errore Sezione 6: {e}")
