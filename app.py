@@ -98,6 +98,18 @@ def manage_tokens(auth_code=None, refresh_token=None):
     except Exception as e:
         st.sidebar.error(f"Errore di rete: {e}")
         return None
+        # --- 3. PARAMETRI TECNICI ---
+# Queste variabili sono fondamentali per il monitoraggio dei segnali
+tf_main = "H1"          # Timeframe principale
+tf_filter = "M15"       # Timeframe di filtro
+check_interval = 60     # Secondi tra ogni controllo
+
+# Parametri operativi richiesti: 0.1 lotti e 5 pips di TP
+lot_size = 0.1
+take_profit_pips = 5
+
+# Lista delle valute G8
+SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP']
 
 # --- 4. INTERFACCIA SIDEBAR ---
 st.sidebar.header("🔌 Connessione Broker")
