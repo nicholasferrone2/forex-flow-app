@@ -92,10 +92,30 @@ st.sidebar.header("🔌 Connessione Broker")
 redirect_uri = "https://forex-flow-app.streamlit.app/" 
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 
+# --- LOGICA DI AUTENTICAZIONE CON REFRESH TOKEN ---
 if "code" in st.query_params:
-    st.sidebar.success("✅ Autorizzazione Ricevuta!")
-else:
-    st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
+    auth_code = st.query_params["code"]
+    
+    # Se non siamo ancora connessi, usiamo manage_tokens
+    if 'access_token' not in st.session_state:
+        with st.sidebar:
+            with st.spinner("🔑 Attivazione connessione sicura..."):
+                res = manage_tokens(auth_code=auth_code)
+                
+                if res and "access_token" in res:
+                    # Salviamo i token nella sessione corrente
+                    st.session_state.access_token = res["access_token"]
+                    st.session_state.refresh_token = res.get("refresh_token")
+                    st.success("✅ Pepperstone Connesso!")
+                else:
+                    st.error("❌ Errore durante l'accesso. Riprova.")
+
+# Se il token scade (o l'app si aggiorna), proviamo a usare il refresh_token
+elif 'refresh_token' in st.session_state and 'access_token' not in st.session_state:
+    res = manage_tokens(refresh_token=st.session_state.refresh_token)
+    if res and "access_token" in res:
+        st.session_state.access_token = res["access_token"]
+        st.session_state.refresh_token = res.get("refresh_token")
 
 st.sidebar.divider()
 
