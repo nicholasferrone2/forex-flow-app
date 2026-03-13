@@ -45,30 +45,32 @@ def send_telegram_msg(message):
         st.error(f"Errore Telegram: {e}")
 
 def send_test_order():
-    # URL universale per Pepperstone/cTrader Open API
-    url = "https://openapi.ctrader.com/tradingapi/v2/symbols/1/order" 
+    # URL specifico per il Proxy di Pepperstone/cTrader
+    # Questo indirizzo è quello che solitamente risolve l'errore 404 HTML
+    url = "https://live-api.ctrader.com/v2/symbols/1/order"
     
     headers = {
         "Authorization": f"Bearer {st.session_state.get('access_token')}",
         "Content-Type": "application/json"
     }
     
-    # Pulizia ID Account (rimuove eventuali virgolette residue dai Secrets)
-    clean_account_id = str(account_id).replace('"', '').replace("'", "").strip()
+    # Pulizia Account ID: rimuove virgolette e converte in numero
+    acc_id_clean = str(account_id).replace('"', '').replace("'", "").strip()
     
     payload = {
         "payloadType": "PROTO_OA_NEW_ORDER_REQ",
-        "ctidTraderAccountId": int(clean_account_id),
-        "symbolId": 1, 
+        "ctidTraderAccountId": int(acc_id_clean),
+        "symbolId": 1,           # 1 = EURUSD
         "orderType": "MARKET",
         "tradeSide": "BUY",
-        "volume": 10000,         # 0.10 lotti = 10.000 unità
-        "takeProfit": 50,        # 5 pips = 50 punti
+        "volume": 10000,         # 0.10 lotti
+        "takeProfit": 50,        # 5 pips
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=20)
+        # Aumentiamo il timeout a 30 secondi
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
         return response
     except Exception as e:
         return None
