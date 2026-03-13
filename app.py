@@ -45,30 +45,27 @@ def send_telegram_msg(message):
         st.error(f"Errore Telegram: {e}")
 
 def send_test_order():
-    # URL di base - Se il tuo conto è LIVE, cambia 'training' in 'live'
-    base_url = "https://openapi.ctrader.com/tradingapi/v2/training"
-    endpoint = f"/accounts/{account_id}/orders"
-    url = base_url + endpoint
+    # URL Diretto per invio ordini cTrader Open API v2
+    url = "https://openapi.ctrader.com/tradingapi/v2/symbols/1/order"
     
     headers = {
         "Authorization": f"Bearer {st.session_state.get('access_token')}",
         "Content-Type": "application/json"
     }
     
-    # Payload standard per cTrader Open API v2
+    # Payload specifico per Pepperstone cTrader
     payload = {
         "payloadType": "PROTO_OA_NEW_ORDER_REQ",
-        "ctidTraderAccountId": account_id,
-        "symbolId": "1",         # 1 è solitamente EURUSD
+        "ctidTraderAccountId": int(account_id), # Assicuriamoci che sia un numero
+        "symbolId": 1, 
         "orderType": "MARKET",
         "tradeSide": "BUY",
-        "volume": 10000,         # 10.000 unità = 0.10 lotti
-        "takeProfit": 50,        # 5 pips (espresso in punti)
+        "volume": 10000,         # 0.10 lotti
+        "takeProfit": 50,        # 5 pips
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
-        # Usiamo il metodo POST per inviare l'ordine
         response = requests.post(url, json=payload, headers=headers, timeout=15)
         return response
     except Exception as e:
@@ -100,33 +97,25 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.subheader(f"Monitoraggio Segnali ({tf_main})")
     st.info(f"Analisi attiva su {len(SYMBOLS)} coppie. Lot: {lot_size} | TP: {take_profit_pips} pips.")
-    # Qui verranno visualizzati i grafici e i flussi
 
 with col2:
     st.subheader("Stato Bot")
-    # Verifichiamo se il token è presente per mostrare lo stato verde
     if st.session_state.get("access_token"):
         st.write("🟢 Trading Automatico Pronto")
         
         st.divider()
-        # Pulsante di test nella Sidebar
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
             
             if risultato is not None:
                 if risultato.status_code == 200:
                     st.sidebar.success("🚀 Ordine eseguito!")
-                    send_telegram_msg(f"✅ Eseguito ordine test su Account {account_id}")
+                    send_telegram_msg(f"✅ Ordine 0.1 lot inviato su conto {account_id}")
                 else:
-                    # Mostriamo solo il codice errore per non sporcare la UI
                     st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
-                    if risultato.status_code == 404:
-                        st.sidebar.warning("Controlla se l'Account ID nei Secrets è corretto.")
+                    # Questo ci dirà se il problema è l'ID conto o il Token
+                    st.sidebar.code(risultato.text[:150])
             else:
-                st.sidebar.error("❌ Connessione al broker fallita.")
+                st.sidebar.error("❌ Errore connessione.")
     else:
         st.write("🔴 Attesa Connessione Broker")
-        st.sidebar.warning("Token mancante. Inseriscilo nei Secrets.")
-
-# Footer con timestamp
-st.write(f"Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')} - Timeframe: {tf_main}")
