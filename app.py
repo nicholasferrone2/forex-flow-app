@@ -34,23 +34,39 @@ take_profit_pips = 5    # Come richiesto
 
 SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP']
 
-# --- 4. FUNZIONI CORE (Semplificate per stabilità) ---
+# --- 4. FUNZIONI CORE ---
 
-def manage_tokens(auth_code=None, refresh_token=None):
-    url = "https://openapi.ctrader.com/apps/token"
-    params = {
-        "client_id": client_id,
-        "client_secret": client_secret,
+def send_telegram_msg(message):
+    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
+    requests.post(url, data=data)
+
+def send_test_order():
+    # URL specifico per ordini tramite Open API v2
+    # Nota: 'live' o 'training' dipende dal tuo tipo di conto Pepperstone
+    url = f"https://openapi.ctrader.com/tradingapi/v2/training/accounts/{account_id}/orders"
+
+    headers = {
+        "Authorization": f"Bearer {st.session_state.get('access_token')}",
+        "Content-Type": "application/json"
     }
-    if auth_code:
-        params.update({"grant_type": "authorization_code", "code": auth_code, "redirect_uri": redirect_uri})
-    elif refresh_token:
-        params.update({"grant_type": "refresh_token", "refresh_token": refresh_token})
+    
+    # Struttura del payload corretta per cTrader Open API
+    payload = {
+        "payloadType": "PROTO_OA_NEW_ORDER_REQ",
+        "ctidTraderAccountId": account_id,
+        "symbolId": 1, 
+        "orderType": "MARKET",
+        "tradeSide": "BUY",
+        "volume": int(lot_size * 100000), # 0.1 lotti = 10.000 unità
+        "takeProfit": take_profit_pips
+    }
     
     try:
-        response = requests.get(url, params=params)
-        return response.json()
-    except:
+        # Usiamo un timeout per evitare che l'app resti appesa
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        return response
+    except Exception as e:
         return None
 
 def send_telegram_msg(message):
