@@ -112,14 +112,16 @@ with col2:
     st.subheader("Stato Bot")
     if "access_token" in st.session_state:
         st.write("🟢 Trading Automatico Pronto")
-           if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
-    risultato = send_test_order()
-    if risultato.status_code == 200:
-        st.sidebar.success("🚀 Ordine inviato!")
-    else:
-        st.sidebar.error(f"❌ Errore: {risultato.text}")
+        
+        # Tasto per inviare l'ordine di test
+        if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
+            risultato = send_test_order()
+            if risultato.status_code == 200:
+                st.sidebar.success("🚀 Ordine inviato!")
+            else:
+                st.sidebar.error(f"❌ Errore: {risultato.text}")
     else:
         st.write("🔴 Attesa Connessione Broker")
 
-# Placeholder per i dati (tf_main ora è definito qui sopra)
+# Placeholder per i dati
 st.write(f"Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')} - Timeframe: {tf_main}")
