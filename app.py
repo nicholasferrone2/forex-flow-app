@@ -99,26 +99,32 @@ def manage_tokens(auth_code=None, refresh_token=None):
         st.sidebar.error(f"Errore di rete: {e}")
         return None
 
-# --- 4. INTERFACCIA SIDEBAR (PULITA E SENZA DUPLICATI) ---
+# --- 4. INTERFACCIA SIDEBAR ---
 st.sidebar.header("🔌 Connessione Broker")
 
-# Logica tasto connessione cTrader
-redirect_uri = "https://forex-flow-app.streamlit.app/" 
+# Usiamo le variabili caricate nella Sezione 2
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 
-# --- LOGICA DI AUTENTICAZIONE CON REFRESH TOKEN ---
+# Mostriamo il tasto di connessione
+st.sidebar.markdown(f'''
+    <a href="{auth_url}" target="_self">
+        <button style="width:100%; border-radius:5px; background-color:#007bff; color:white; border:none; padding:10px; cursor:pointer;">
+            🔗 Connetti a Pepperstone
+        </button>
+    </a>
+    ''', unsafe_allow_html=True)
+
+# Gestione del ritorno da cTrader (il codice segreto)
 if "code" in st.query_params:
     auth_code = st.query_params["code"]
-    
-    if 'access_token' not in st.session_state:
-        with st.sidebar:
-            with st.spinner("🔑 Attivazione connessione sicura..."):
-                res = manage_tokens(auth_code=auth_code)
-                
-                if res and "access_token" in res:
-                    st.session_state.access_token = res["access_token"]
-                    st.session_state.refresh_token = res.get("refresh_token")
-                    st.success("✅ Pepperstone Connesso!")
+    if "access_token" not in st.session_state:
+        with st.sidebar.spinner("Autenticazione in corso..."):
+            token_data = manage_tokens(auth_code=auth_code)
+            if token_data:
+                st.session_state.access_token = token_data["accessToken"]
+                st.session_state.refresh_token = token_data["refreshToken"]
+                st.sidebar.success("✅ Connesso a cTrader!")
+                st.rerun()
                 else:
                     st.error("❌ Errore durante l'accesso. Riprova.")
 
