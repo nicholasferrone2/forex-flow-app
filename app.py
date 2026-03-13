@@ -58,6 +58,28 @@ def send_telegram_msg(message):
     data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
     requests.post(url, data=data)
 
+def send_test_order():
+    url = f"https://openapi.ctrader.com/tradingapi/v2/symbols/1/order" # 1 solitamente è EURUSD
+    headers = {
+        "Authorization": f"Bearer {st.session_state.access_token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "payloadType": "PROTO_OA_NEW_ORDER_REQ",
+        "ctidTraderAccountId": account_id,
+        "symbolId": 1, 
+        "orderType": "MARKET",
+        "tradeSide": "BUY",
+        "volume": int(lot_size * 100000), # Converte 0.1 lotti in unità
+        "takeProfit": take_profit_pips
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        st.sidebar.success("🚀 Ordine inviato con successo!")
+    else:
+        st.sidebar.error(f"❌ Errore invio: {response.text}")
+
 # --- 5. INTERFACCIA SIDEBAR E CONNESSIONE ---
 st.sidebar.header("🔌 Connessione Broker")
 
