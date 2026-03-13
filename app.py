@@ -34,41 +34,34 @@ take_profit_pips = 5    # Come richiesto
 
 SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP']
 
-# --- 4. FUNZIONI CORE ---
-
-def send_telegram_msg(message):
-    try:
-        url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
-        data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
-        requests.post(url, data=data, timeout=10)
-    except Exception as e:
-        st.error(f"Errore Telegram: {e}")
-
 def send_test_order():
-    # URL Standard per ordini cTrader v2
-    url = "https://openapi.ctrader.com/tradingapi/v2/symbols/1/order"
-    
+    # URL Corretto per il server Open API Proxy
+    url = "https://live-api.ctrader.com/v2/symbols/1/order" 
+    # Proviamo anche l'alternativa se il primo fallisce: 
+    # https://openapi.ctrader.com/tradingapi/v2/symbols/1/order
+
     headers = {
         "Authorization": f"Bearer {st.session_state.get('access_token')}",
         "Content-Type": "application/json"
     }
     
-    # Pulizia Account ID: rimuove virgolette se presenti e converte in numero
-    clean_account_id = int(str(account_id).replace('"', '').replace("'", ""))
+    # Pulizia ID Account (rimuove eventuali virgolette residue dai Secrets)
+    clean_account_id = str(account_id).replace('"', '').replace("'", "").strip()
     
     payload = {
         "payloadType": "PROTO_OA_NEW_ORDER_REQ",
-        "ctidTraderAccountId": clean_account_id,
-        "symbolId": 1,           # 1 = EURUSD (standard Pepperstone)
+        "ctidTraderAccountId": int(clean_account_id),
+        "symbolId": 1, 
         "orderType": "MARKET",
         "tradeSide": "BUY",
-        "volume": 10000,         # 10.000 unità = 0.10 lotti
+        "volume": 10000,         # 0.10 lotti
         "takeProfit": 50,        # 5 pips
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        # Usiamo un timeout leggermente più lungo per il broker
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
         return response
     except Exception as e:
         return None
