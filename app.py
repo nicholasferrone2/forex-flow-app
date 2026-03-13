@@ -99,32 +99,34 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     st.subheader(f"Monitoraggio Segnali ({tf_main})")
-    # Qui il bot visualizzerà l'analisi tecnica
     st.info(f"Analisi attiva su {len(SYMBOLS)} coppie. Lot: {lot_size} | TP: {take_profit_pips} pips.")
+    # Qui verranno visualizzati i grafici e i flussi
 
 with col2:
     st.subheader("Stato Bot")
-    if "access_token" in st.session_state and st.session_state.access_token:
+    # Verifichiamo se il token è presente per mostrare lo stato verde
+    if st.session_state.get("access_token"):
         st.write("🟢 Trading Automatico Pronto")
         
         st.divider()
-        # Tasto per inviare l'ordine di test dalla Sidebar
+        # Pulsante di test nella Sidebar
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
             
             if risultato is not None:
                 if risultato.status_code == 200:
-                    st.sidebar.success("🚀 Ordine inviato con successo!")
-                    send_telegram_msg(f"✅ TEST: Ordine 0.1 lot eseguito su Account {account_id}")
+                    st.sidebar.success("🚀 Ordine eseguito!")
+                    send_telegram_msg(f"✅ Eseguito ordine test su Account {account_id}")
                 else:
+                    # Mostriamo solo il codice errore per non sporcare la UI
                     st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
-                    # Mostra un'anteprima tecnica dell'errore per il debug
-                    st.sidebar.code(risultato.text[:100])
+                    if risultato.status_code == 404:
+                        st.sidebar.warning("Controlla se l'Account ID nei Secrets è corretto.")
             else:
-                st.sidebar.error("❌ Connessione fallita. Controlla i log.")
+                st.sidebar.error("❌ Connessione al broker fallita.")
     else:
         st.write("🔴 Attesa Connessione Broker")
-        st.sidebar.warning("Token non trovato. Verifica i Secrets su Streamlit.")
+        st.sidebar.warning("Token mancante. Inseriscilo nei Secrets.")
 
-# Info di aggiornamento a fondo pagina
+# Footer con timestamp
 st.write(f"Ultimo aggiornamento: {datetime.now().strftime('%H:%M:%S')} - Timeframe: {tf_main}")
