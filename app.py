@@ -13,10 +13,13 @@ st.set_page_config(page_title="G8 Pro Trader", layout="wide")
 
 # 2. RECUPERO SECRETS
 try:
-    TOKEN = st.secrets["TELEGRAM_TOKEN"]
-    CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-    client_id = st.secrets["CTRADER_CLIENT_ID"]
-    client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
+   # --- 2. CONFIGURAZIONE CREDENZIALI ---
+# Carichiamo i dati dai Secrets di Streamlit usando i nomi corretti
+client_id = st.secrets["CTRADER_CLIENT_ID"]
+client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
+telegram_token = st.secrets["TELEGRAM_TOKEN"]
+telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"]
+account_id = st.secrets["CTRADER_ACCOUNT_ID"]
 except Exception as e:
     st.error(f"⚠️ Errore nei Secrets: {e}")
     st.stop()
