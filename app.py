@@ -11,17 +11,20 @@ from datetime import datetime, timedelta
 # 1. CONFIGURAZIONE PAGINA
 st.set_page_config(page_title="G8 Pro Trader", layout="wide")
 
-# 2. RECUPERO SECRETS
+# --- 2. CONFIGURAZIONE CREDENZIALI ---
+# Carichiamo i dati dai Secrets di Streamlit usando i nomi esatti che hai nelle foto
 try:
-   # --- 2. CONFIGURAZIONE CREDENZIALI ---
-# Carichiamo i dati dai Secrets di Streamlit usando i nomi corretti
-client_id = st.secrets["CTRADER_CLIENT_ID"]
-client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
-telegram_token = st.secrets["TELEGRAM_TOKEN"]
-telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"]
-account_id = st.secrets["CTRADER_ACCOUNT_ID"]
+    client_id = st.secrets["CTRADER_CLIENT_ID"]
+    client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
+    telegram_token = st.secrets["TELEGRAM_TOKEN"]
+    telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"]
+    account_id = st.secrets["CTRADER_ACCOUNT_ID"]
+    
+    # Definiamo l'URL di reindirizzamento
+    redirect_uri = "https://forex-flow-app.streamlit.app/"
+    
 except Exception as e:
-    st.error(f"⚠️ Errore nei Secrets: {e}")
+    st.error(f"Errore nel caricamento dei Secrets: {e}")
     st.stop()
 
 # --- 3. FUNZIONI TELEGRAM E GESTIONE TOKEN ---
