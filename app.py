@@ -102,58 +102,26 @@ def manage_tokens(auth_code=None, refresh_token=None):
 # --- 4. INTERFACCIA SIDEBAR ---
 st.sidebar.header("🔌 Connessione Broker")
 
-# Usiamo le variabili caricate nella Sezione 2
+# Creiamo l'URL di autenticazione usando le variabili della Sezione 2
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 
-# Mostriamo il tasto di connessione
-st.sidebar.markdown(f'''
-    <a href="{auth_url}" target="_self">
-        <button style="width:100%; border-radius:5px; background-color:#007bff; color:white; border:none; padding:10px; cursor:pointer;">
-            🔗 Connetti a Pepperstone
-        </button>
-    </a>
-    ''', unsafe_allow_html=True)
+# Creiamo il tasto di connessione semplice
+st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url, use_container_width=True)
 
-# Gestione del ritorno da cTrader (il codice segreto)
+# Gestione del ritorno dal Broker (Autorizzazione)
 if "code" in st.query_params:
     auth_code = st.query_params["code"]
+    
     if "access_token" not in st.session_state:
         with st.sidebar.spinner("Autenticazione in corso..."):
             token_data = manage_tokens(auth_code=auth_code)
             if token_data:
                 st.session_state.access_token = token_data["accessToken"]
                 st.session_state.refresh_token = token_data["refreshToken"]
-                st.sidebar.success("✅ Connesso a cTrader!")
+                st.sidebar.success("✅ Connesso!")
                 st.rerun()
-                else:
-                    st.error("❌ Errore durante l'accesso. Riprova.")
-
-elif 'refresh_token' in st.session_state and 'access_token' not in st.session_state:
-    res = manage_tokens(refresh_token=st.session_state.refresh_token)
-    if res and "access_token" in res:
-        st.session_state.access_token = res["access_token"]
-        st.session_state.refresh_token = res.get("refresh_token")
-
-# --- AGGIUNGI QUESTO: MOSTRA IL TASTO SE NON CONNESSO ---
-elif 'access_token' not in st.session_state:
-    st.sidebar.link_button("🔗 Connetti a cTrader", auth_url)
-
-st.sidebar.divider()
-
-# --- PARAMETRI STRATEGIA M15 (FISSI) ---
-st.sidebar.subheader("⚙️ Parametri Strategia M15")
-lotti = st.sidebar.number_input("Volume (Lotti):", value=0.10, step=0.01, key="lots_input")
-tp_pips = st.sidebar.number_input("Take Profit (Pips):", value=15, key="tp_input")
-
-st.sidebar.info(f"Configurazione Attiva: {lotti} Lots | {tp_pips} Pips TP")
-
-# UNICO MENU TIMEFRAME
-tf_main = st.sidebar.selectbox("Seleziona Timeframe:", ("1m", "5m", "15m", "1h"), index=2, key="tf_selector")
-
-# Tasto Test
-if st.sidebar.button("🧪 Simula Segnale G8", key="test_btn"):
-    send_telegram_trade_signal("EURUSD", "BUY", lotti, tp_pips)
-    st.sidebar.success("Test inviato!")
+            else:
+                st.sidebar.error("❌ Errore scambio token")
 
 # 5. TITOLO E LOGICA G8
 st.title("📊 G8 Flow Monitor & Execution")
