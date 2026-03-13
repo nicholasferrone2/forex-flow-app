@@ -29,8 +29,8 @@ except Exception as e:
 tf_main = "H1"          
 tf_filter = "M15"       
 check_interval = 60     
-lot_size = 0.1          # Come richiesto
-take_profit_pips = 5    # Come richiesto
+lot_size = 0.1          
+take_profit_pips = 5    
 
 SYMBOLS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'AUDUSD', 'NZDUSD', 'USDCAD', 'EURGBP']
 
@@ -41,12 +41,11 @@ def send_telegram_msg(message):
         url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
         data = {"chat_id": telegram_chat_id, "text": message, "parse_mode": "Markdown"}
         requests.post(url, data=data, timeout=10)
-    except Exception as e:
-        st.error(f"Errore Telegram: {e}")
+    except Exception:
+        pass
 
 def send_test_order():
-    # URL specifico per il Proxy di Pepperstone/cTrader
-    # Questo indirizzo è quello che solitamente risolve l'errore 404 HTML
+    # URL PROXY specifico per Pepperstone/TopFX (Bypassa l'errore HTML)
     url = "https://live-api.ctrader.com/v2/symbols/1/order"
     
     headers = {
@@ -54,7 +53,7 @@ def send_test_order():
         "Content-Type": "application/json"
     }
     
-    # Pulizia Account ID: rimuove virgolette e converte in numero
+    # Pulizia ID Account (toglie virgolette e converte in numero)
     acc_id_clean = str(account_id).replace('"', '').replace("'", "").strip()
     
     payload = {
@@ -64,30 +63,25 @@ def send_test_order():
         "orderType": "MARKET",
         "tradeSide": "BUY",
         "volume": 10000,         # 0.10 lotti
-        "takeProfit": 50,        # 5 pips
+        "takeProfit": 50,        # 5 pips (50 punti)
         "timeInForce": "GOOD_TILL_CANCEL"
     }
     
     try:
-        # Aumentiamo il timeout a 30 secondi
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response = requests.post(url, json=payload, headers=headers, timeout=20)
         return response
-    except Exception as e:
+    except Exception:
         return None
 
 # --- 5. INTERFACCIA SIDEBAR E CONNESSIONE ---
 st.sidebar.header("🔌 Connessione Broker")
 
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
-
-# Tasto di connessione
 st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url, use_container_width=True)
 
-# Gestione del ritorno dal Login
 if "code" in st.query_params:
     if "access_token" not in st.session_state:
         code = st.query_params["code"]
-        # Assicurati che manage_tokens sia definita nella sezione precedente (2)
         data = manage_tokens(auth_code=code)
         if data and "accessToken" in data:
             st.session_state.access_token = data["accessToken"]
@@ -105,20 +99,21 @@ with col1:
 
 with col2:
     st.subheader("Stato Bot")
-    if "access_token" in st.session_state and st.session_state.access_token:
+    if st.session_state.get("access_token"):
         st.write("🟢 Trading Automatico Pronto")
         st.divider()
         
-        # Tasto per inviare l'ordine di test
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
             if risultato is not None:
+                # Se il broker risponde con successo o errore tecnico (non HTML)
                 if risultato.status_code == 200:
                     st.sidebar.success("🚀 Ordine inviato!")
-                    send_telegram_msg(f"✅ Eseguito ordine test 0.1 lot su Pepperstone ({account_id})")
+                    send_telegram_msg(f"✅ Eseguito ordine test su Pepperstone.")
                 else:
                     st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
-                    st.sidebar.code(risultato.text[:150])
+                    # Mostra solo l'inizio della risposta per evitare muri di testo
+                    st.sidebar.code(risultato.text[:100])
             else:
                 st.sidebar.error("❌ Connessione fallita")
     else:
