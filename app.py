@@ -32,7 +32,7 @@ def send_telegram_trade_signal(pair, action, lot, tp):
         f"🔹 Volume: **{lot} Lotti**\n"
         f"🔹 Take Profit: **{tp} Pips**\n"
         f"🔹 Stop Loss: **NON IMPOSTATO**\n\n"
-        f"Vuoi inviare l'ordine a Pepperstone?"
+        f"Vuoi inviare l'ordine a cTrader?"
     )
     
     # I dati dell'ordine vengono "impacchettati" nel bottone
