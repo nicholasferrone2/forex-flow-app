@@ -53,6 +53,37 @@ def send_telegram_trade_signal(pair, action, lot, tp):
         requests.post(url, data=payload, timeout=5)
     except:
         pass
+        # --- NUOVA FUNZIONE PER GESTIRE I TOKEN (Accesso e Rinnovo) ---
+def manage_tokens(auth_code=None, refresh_token=None):
+    url = "https://openapi.ctrader.com/apps/token"
+    
+    if auth_code:
+        # Questo serve per il PRIMO ACCESSO (quando clicchi sul tasto Connetti)
+        params = {
+            "grant_type": "authorization_code",
+            "code": auth_code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri
+        }
+    elif refresh_token:
+        # Questo serve per il RINNOVO AUTOMATICO (quando la chiave scade)
+        params = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+            "client_secret": client_secret
+        }
+    else:
+        return None
+
+    try:
+        # Inviamo la richiesta ai server di cTrader
+        response = requests.get(url, params=params)
+        return response.json()
+    except Exception as e:
+        st.error(f"Errore nella comunicazione col Broker: {e}")
+        return {}
 
 # --- 4. INTERFACCIA SIDEBAR (PULITA E SENZA DUPLICATI) ---
 st.sidebar.header("🔌 Connessione Broker")
