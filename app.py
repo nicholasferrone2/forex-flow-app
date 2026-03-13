@@ -7,17 +7,23 @@ from datetime import datetime
 # --- 1. CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="IncaForex G8 Flow", layout="wide")
 
-# --- 2. CONFIGURAZIONE CREDENZIALI (Dalle tue immagini Secrets) ---
+# --- 2. CONFIGURAZIONE CREDENZIALI ---
 try:
     client_id = st.secrets["CTRADER_CLIENT_ID"]
     client_secret = st.secrets["CTRADER_CLIENT_SECRET"]
     telegram_token = st.secrets["TELEGRAM_TOKEN"]
     telegram_chat_id = st.secrets["TELEGRAM_CHAT_ID"]
     account_id = st.secrets["CTRADER_ACCOUNT_ID"]
+    
+    # Carichiamo i token se presenti
+    if "access_token" not in st.session_state:
+        st.session_state.access_token = st.secrets.get("CTRADER_ACCESS_TOKEN")
+    if "refresh_token" not in st.session_state:
+        st.session_state.refresh_token = st.secrets.get("CTRADER_REFRESH_TOKEN")
+        
     redirect_uri = "https://forex-flow-app.streamlit.app/"
 except Exception as e:
-    st.error(f"Errore caricamento Secrets: {e}")
-    st.stop()
+    st.error(f"Errore Secrets: {e}")
 
 # --- 3. PARAMETRI TECNICI E OPERATIVI ---
 tf_main = "H1"          
