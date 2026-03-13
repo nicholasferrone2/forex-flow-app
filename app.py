@@ -96,26 +96,27 @@ auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirec
 if "code" in st.query_params:
     auth_code = st.query_params["code"]
     
-    # Se non siamo ancora connessi, usiamo manage_tokens
     if 'access_token' not in st.session_state:
         with st.sidebar:
             with st.spinner("🔑 Attivazione connessione sicura..."):
                 res = manage_tokens(auth_code=auth_code)
                 
                 if res and "access_token" in res:
-                    # Salviamo i token nella sessione corrente
                     st.session_state.access_token = res["access_token"]
                     st.session_state.refresh_token = res.get("refresh_token")
                     st.success("✅ Pepperstone Connesso!")
                 else:
                     st.error("❌ Errore durante l'accesso. Riprova.")
 
-# Se il token scade (o l'app si aggiorna), proviamo a usare il refresh_token
 elif 'refresh_token' in st.session_state and 'access_token' not in st.session_state:
     res = manage_tokens(refresh_token=st.session_state.refresh_token)
     if res and "access_token" in res:
         st.session_state.access_token = res["access_token"]
         st.session_state.refresh_token = res.get("refresh_token")
+
+# --- AGGIUNGI QUESTO: MOSTRA IL TASTO SE NON CONNESSO ---
+elif 'access_token' not in st.session_state:
+    st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
 
 st.sidebar.divider()
 
@@ -126,7 +127,7 @@ tp_pips = st.sidebar.number_input("Take Profit (Pips):", value=15, key="tp_input
 
 st.sidebar.info(f"Configurazione Attiva: {lotti} Lots | {tp_pips} Pips TP")
 
-# UNICO MENU TIMEFRAME (Rimosso il duplicato)
+# UNICO MENU TIMEFRAME
 tf_main = st.sidebar.selectbox("Seleziona Timeframe:", ("1m", "5m", "15m", "1h"), index=2, key="tf_selector")
 
 # Tasto Test
