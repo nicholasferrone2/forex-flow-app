@@ -130,12 +130,23 @@ with col2:
         st.write("🟢 Trading Automatico Pronto")
         
         # Tasto per inviare l'ordine di test
+       # --- BLOCCO AGGIORNATO NELLA SEZIONE 6 ---
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
-            if risultato.status_code == 200:
-                st.sidebar.success("🚀 Ordine inviato!")
+            
+            # Controlliamo se la risposta esiste prima di leggere lo status_code
+            if risultato is not None:
+                if risultato.status_code == 200:
+                    st.sidebar.success("🚀 Ordine inviato!")
+                    send_telegram_msg("✅ Bot: Eseguito ordine test 0.1 lot.")
+                else:
+                    # Se il broker risponde con un errore (es. 404 o 401)
+                    st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
+                    # Questo mostra il motivo tecnico dell'errore (molto utile ora)
+                    st.sidebar.code(risultato.text[:100])
             else:
-                st.sidebar.error(f"❌ Errore: {risultato.text}")
+                # Se la funzione send_test_order è andata in crash (Exception)
+                st.sidebar.error("❌ Errore di connessione al server cTrader")
     else:
         st.write("🔴 Attesa Connessione Broker")
 
