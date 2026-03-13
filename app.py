@@ -98,7 +98,11 @@ st.sidebar.header("🔌 Connessione Broker")
 
 # Logica tasto connessione cTrader
 redirect_uri = "https://forex-flow-app.streamlit.app/" 
-auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
+auth_url = (
+    "https://openapi.ctrader.com/apps/auth"
+    f"?client_id={client_id}"
+    f"&redirect_uri={redirect_uri}"
+    "&scope=accounts,trading"
 
 # --- LOGICA DI AUTENTICAZIONE CON REFRESH TOKEN ---
 if "code" in st.query_params:
