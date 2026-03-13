@@ -69,9 +69,14 @@ else:
 st.sidebar.divider()
 
 # --- CAMPI INPUT PER TRADING ---
-st.sidebar.subheader("⚙️ Parametri Ordine")
-lotti = st.sidebar.number_input("Volume (Lotti):", min_value=0.01, max_value=5.0, value=0.10, step=0.01)
-tp_pips = st.sidebar.number_input("Take Profit (Pips):", min_value=0, max_value=500, value=20)
+# --- CAMPI INPUT PER TRADING (FISSI PER M15) ---
+st.sidebar.subheader("⚙️ Parametri Strategia M15")
+lotti = st.sidebar.number_input("Volume (Lotti):", value=0.10, step=0.01)
+tp_pips = st.sidebar.number_input("Take Profit (Pips):", value=15) # Valore ottimizzato per M15
+st.sidebar.info("Configurazione: 0.1 Lots | 15 Pips TP")
+
+# Timeframe predefinito su 15m
+tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
 st.sidebar.info("Nota: Lo Stop Loss è disattivato.")
 
 # Tasto Test
