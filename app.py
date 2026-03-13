@@ -21,69 +21,77 @@ except Exception as e:
     st.error(f"⚠️ Errore nei Secrets: {e}")
     st.stop()
 
-# 3. FUNZIONE INVIO TELEGRAM (POTENZIATA)
+# --- 3. FUNZIONI TELEGRAM E GESTIONE TOKEN ---
+
 def send_telegram_trade_signal(pair, action, lot, tp):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    """Invia il segnale con i tasti operativi a Telegram"""
+    token = st.secrets["TELEGRAM_TOKEN"]
+    chat_id = st.secrets["TELEGRAM_CHAT_ID"]
     
-    messaggio = (
-        f"🚀 **G8 FLOW ALERT**\n\n"
-        f"🔹 Asset: **{pair}**\n"
-        f"🔹 Direzione: **{action}**\n"
-        f"🔹 Volume: **{lot} Lotti**\n"
-        f"🔹 Take Profit: **{tp} Pips**\n"
-        f"🔹 Stop Loss: **NON IMPOSTATO**\n\n"
-        f"Vuoi inviare l'ordine a cTrader?"
+    # Costruiamo l'URL per il comando del bot (il tuo "Esegui")
+    # Questo URL deve puntare alla tua app per processare l'ordine
+    base_url = "https://forex-flow-app.streamlit.app/"
+    exec_url = f"{base_url}?pair={pair}&action={action}&lot={lot}&tp={tp}"
+    
+    msg = (
+        f"🚀 **SEGNALE G8 FLOW (M15)**\n\n"
+        f"📈 **Coppia:** {pair}\n"
+        f"↕️ **Azione:** {action}\n"
+        f"💰 **Size:** {lot} lotti\n"
+        f"🎯 **TP:** {tp} pips\n\n"
+        f"⚠️ *Verifica sempre sul grafico prima di operare.*"
     )
     
-    # I dati dell'ordine vengono "impacchettati" nel bottone
-    keyboard = {
-        "inline_keyboard": [[
-            {"text": f"✅ Esegui {action} {pair}", "callback_data": f"trade_{action}_{pair}_{lot}_{tp}"},
-            {"text": "❌ Ignora", "callback_data": "ignore"}
-        ]]
+    payload = {
+        "chat_id": chat_id,
+        "text": msg,
+        "parse_mode": "Markdown",
+        "reply_markup": json.dumps({
+            "inline_keyboard": [[
+                {"text": "✅ Esegui Ordine", "url": exec_url}
+            ]]
+        })
     }
     
-    payload = {
-        "chat_id": CHAT_ID,
-        "text": messaggio,
-        "reply_markup": json.dumps(keyboard),
-        "parse_mode": "Markdown"
-    }
     try:
-        requests.post(url, data=payload, timeout=5)
-    except:
-        pass
-        # --- NUOVA FUNZIONE PER GESTIRE I TOKEN (Accesso e Rinnovo) ---
+        url_tg = f"https://api.telegram.org/bot{token}/sendMessage"
+        requests.post(url_tg, data=payload, timeout=10)
+    except Exception as e:
+        st.error(f"Errore invio Telegram: {e}")
+
 def manage_tokens(auth_code=None, refresh_token=None):
+    """Gestisce l'autenticazione cTrader via POST"""
     url = "https://openapi.ctrader.com/apps/token"
     
+    # Dati base per la richiesta
+    payload = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri
+    }
+    
     if auth_code:
-        # Questo serve per il PRIMO ACCESSO (quando clicchi sul tasto Connetti)
-        params = {
-            "grant_type": "authorization_code",
-            "code": auth_code,
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "redirect_uri": redirect_uri
-        }
+        payload["grant_type"] = "authorization_code"
+        payload["code"] = auth_code
     elif refresh_token:
-        # Questo serve per il RINNOVO AUTOMATICO (quando la chiave scade)
-        params = {
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "client_id": client_id,
-            "client_secret": client_secret
-        }
+        payload["grant_type"] = "refresh_token"
+        payload["refresh_token"] = refresh_token
     else:
         return None
 
     try:
-        # Inviamo la richiesta ai server di cTrader
-        response = requests.get(url, params=params)
-        return response.json()
+        # Usiamo POST per evitare l'errore 400 Bad Request
+        response = requests.post(url, data=payload, timeout=15)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            # Mostriamo l'errore specifico di cTrader se qualcosa fallisce
+            st.sidebar.error(f"Errore cTrader: {response.text}")
+            return None
     except Exception as e:
-        st.error(f"Errore nella comunicazione col Broker: {e}")
-        return {}
+        st.sidebar.error(f"Errore di rete: {e}")
+        return None
 
 # --- 4. INTERFACCIA SIDEBAR (PULITA E SENZA DUPLICATI) ---
 st.sidebar.header("🔌 Connessione Broker")
