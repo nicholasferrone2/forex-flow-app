@@ -54,11 +54,11 @@ def send_telegram_trade_signal(pair, action, lot, tp):
     except:
         pass
 
-# 4. INTERFACCIA SIDEBAR
+# --- 4. INTERFACCIA SIDEBAR (PULITA E SENZA DUPLICATI) ---
 st.sidebar.header("🔌 Connessione Broker")
 
 # Logica tasto connessione cTrader
-redirect_uri = "https://tua-app.streamlit.app/" # Ricorda di aggiornare questo!
+redirect_uri = "https://forex-flow-app.streamlit.app/" 
 auth_url = f"https://openapi.ctrader.com/apps/auth?client_id={client_id}&redirect_uri={redirect_uri}&scope=accounts,trading"
 
 if "code" in st.query_params:
@@ -68,24 +68,20 @@ else:
 
 st.sidebar.divider()
 
-# --- CAMPI INPUT PER TRADING ---
-# --- CAMPI INPUT PER TRADING (FISSI PER M15) ---
+# --- PARAMETRI STRATEGIA M15 (FISSI) ---
 st.sidebar.subheader("⚙️ Parametri Strategia M15")
-lotti = st.sidebar.number_input("Volume (Lotti):", value=0.10, step=0.01)
-tp_pips = st.sidebar.number_input("Take Profit (Pips):", value=15) # Valore ottimizzato per M15
-st.sidebar.info("Configurazione: 0.1 Lots | 15 Pips TP")
+lotti = st.sidebar.number_input("Volume (Lotti):", value=0.10, step=0.01, key="lots_input")
+tp_pips = st.sidebar.number_input("Take Profit (Pips):", value=15, key="tp_input")
 
-# Timeframe predefinito su 15m
-tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
-st.sidebar.info("Nota: Lo Stop Loss è disattivato.")
+st.sidebar.info(f"Configurazione Attiva: {lotti} Lots | {tp_pips} Pips TP")
+
+# UNICO MENU TIMEFRAME (Rimosso il duplicato)
+tf_main = st.sidebar.selectbox("Seleziona Timeframe:", ("1m", "5m", "15m", "1h"), index=2, key="tf_selector")
 
 # Tasto Test
-if st.sidebar.button("🧪 Simula Segnale G8"):
+if st.sidebar.button("🧪 Simula Segnale G8", key="test_btn"):
     send_telegram_trade_signal("EURUSD", "BUY", lotti, tp_pips)
     st.sidebar.success("Test inviato!")
-
-st.sidebar.divider()
-tf_main = st.sidebar.selectbox("Timeframe:", ("1m", "5m", "15m", "1h"), index=2)
 
 # 5. TITOLO E LOGICA G8
 st.title("📊 G8 Flow Monitor & Execution")
