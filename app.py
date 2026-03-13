@@ -45,7 +45,7 @@ def send_telegram_msg(message):
         st.error(f"Errore Telegram: {e}")
 
 def send_test_order():
-    # URL Diretto per invio ordini cTrader Open API v2
+    # URL Standard per ordini cTrader v2
     url = "https://openapi.ctrader.com/tradingapi/v2/symbols/1/order"
     
     headers = {
@@ -53,14 +53,16 @@ def send_test_order():
         "Content-Type": "application/json"
     }
     
-    # Payload specifico per Pepperstone cTrader
+    # Pulizia Account ID: rimuove virgolette se presenti e converte in numero
+    clean_account_id = int(str(account_id).replace('"', '').replace("'", ""))
+    
     payload = {
         "payloadType": "PROTO_OA_NEW_ORDER_REQ",
-        "ctidTraderAccountId": int(account_id), # Assicuriamoci che sia un numero
-        "symbolId": 1, 
+        "ctidTraderAccountId": clean_account_id,
+        "symbolId": 1,           # 1 = EURUSD (standard Pepperstone)
         "orderType": "MARKET",
         "tradeSide": "BUY",
-        "volume": 10000,         # 0.10 lotti
+        "volume": 10000,         # 10.000 unità = 0.10 lotti
         "takeProfit": 50,        # 5 pips
         "timeInForce": "GOOD_TILL_CANCEL"
     }
@@ -104,18 +106,19 @@ with col2:
         st.write("🟢 Trading Automatico Pronto")
         
         st.divider()
+        # Pulsante nella Sidebar per il test
         if st.sidebar.button("🧪 Invia Ordine Test (0.1 lot)"):
             risultato = send_test_order()
             
             if risultato is not None:
                 if risultato.status_code == 200:
                     st.sidebar.success("🚀 Ordine eseguito!")
-                    send_telegram_msg(f"✅ Ordine 0.1 lot inviato su conto {account_id}")
+                    send_telegram_msg(f"✅ Ordine 0.1 lot inviato con successo su conto {account_id}")
                 else:
                     st.sidebar.error(f"❌ Errore Broker: {risultato.status_code}")
-                    # Questo ci dirà se il problema è l'ID conto o il Token
+                    # Mostra il dettaglio dell'errore (molto utile se è ancora 404)
                     st.sidebar.code(risultato.text[:150])
             else:
-                st.sidebar.error("❌ Errore connessione.")
+                st.sidebar.error("❌ Connessione fallita")
     else:
         st.write("🔴 Attesa Connessione Broker")
