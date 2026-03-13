@@ -116,7 +116,7 @@ elif 'refresh_token' in st.session_state and 'access_token' not in st.session_st
 
 # --- AGGIUNGI QUESTO: MOSTRA IL TASTO SE NON CONNESSO ---
 elif 'access_token' not in st.session_state:
-    st.sidebar.link_button("🔗 Connetti a Pepperstone", auth_url)
+    st.sidebar.link_button("🔗 Connetti a cTrader", auth_url)
 
 st.sidebar.divider()
 
